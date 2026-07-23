@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -37,67 +37,29 @@ export default function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 32 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image
-              source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/noxorlogo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvbm94b3Jsb2dvLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ2MjgsImV4cCI6MTgxNjI0MDYyOH0.GpNodQ3zCNnNL5LCKxmnX8VrGalTFhnRER-SwUW_owg' }}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+            <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/noxorlogo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvbm94b3Jsb2dvLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ2MjgsImV4cCI6MTgxNjI0MDYyOH0.GpNodQ3zCNnNL5LCKxmnX8VrGalTFhnRER-SwUW_owg' }} style={styles.logoImage} resizeMode="contain" />
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center' }}>
-              <Image 
-                source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/qr%20code.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvcXIgY29kZS5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0NzA0MTc2LCJleHAiOjE4NzkzMTIxNzZ9.RfW01maAbZTSMdv_gohZ0H-KZ1KvfcvrPWZpnrzH4GI' }}
-                style={{ width: 44, height: 44 }}
-                resizeMode="contain"
-              />
+              <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/qr%20code.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvcXIgY29kZS5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0NzA0MTc2LCJleHAiOjE4NzkzMTIxNzZ9.RfW01maAbZTSMdv_gohZ0H-KZ1KvfcvrPWZpnrzH4GI' }} style={{ width: 44, height: 44 }} resizeMode="contain" />
             </TouchableOpacity>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 12 }}>
-              <Image 
-                source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/icons8-night-94.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvaWNvbnM4LW5pZ2h0LTk0LnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQwMDIsImV4cCI6MTgxNjI0MDAwMn0.k3tawyje2ZUFiusOc769gEqiHPeLtb2-ggW8tfR1HKs' }}
-                style={{ width: 44, height: 44 }}
-                resizeMode="contain"
-              />
+              <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/icons8-night-94.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvaWNvbnM4LW5pZ2h0LTk0LnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQwMDIsImV4cCI6MTgxNjI0MDAwMn0.k3tawyje2ZUFiusOc769gEqiHPeLtb2-ggW8tfR1HKs' }} style={{ width: 44, height: 44 }} resizeMode="contain" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Search */}
         <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.searchContainer}>
-          <Image 
-            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/searchbar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvc2VhcmNoYmFyLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ0NjQsImV4cCI6MTg3OTMxMjQ2NH0.XTKuRDagScS_4aVKJ6SHFbimzWM0P6iFosNJL7T4dIY' }}
-            style={styles.searchIcon}
-            resizeMode="contain"
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            placeholderTextColor="#8E8E93"
-            value={search}
-            onChangeText={setSearch}
-          />
+          <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/searchbar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvc2VhcmNoYmFyLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ0NjQsImV4cCI6MTg3OTMxMjQ2NH0.XTKuRDagScS_4aVKJ6SHFbimzWM0P6iFosNJL7T4dIY' }} style={styles.searchIcon} resizeMode="contain" />
+          <TextInput style={styles.searchInput} placeholder="Search" placeholderTextColor="#8E8E93" value={search} onChangeText={setSearch} />
         </Animated.View>
 
-        {/* Categories Grid */}
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.grid}>
           {CATEGORIES.map((cat, index) => (
-            <TouchableOpacity 
-              key={cat.id} 
-              style={styles.categoryItem} 
-              activeOpacity={0.7}
-              onPress={() => {
-                if (cat.id === 'medicine') {
-                  navigation.navigate('Medicines');
-                }
-              }}
-            >
+            <TouchableOpacity key={cat.id} style={styles.categoryItem} activeOpacity={0.7} onPress={() => { if (cat.id === 'medicine') { navigation.navigate('Medicines'); } }}>
               {cat.imageUrl ? (
                 <Image source={{ uri: cat.imageUrl }} style={styles.categoryImage} resizeMode="contain" />
               ) : (
@@ -108,10 +70,8 @@ export default function HomeScreen({ navigation }: any) {
           ))}
         </Animated.View>
 
-        {/* Deals Section */}
         <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.dealsSection}>
           <Text style={styles.dealsTitle}>Today's deals !</Text>
-
         </Animated.View>
 
         <View style={styles.spacer} />
@@ -146,31 +106,6 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     gap: 12,
-  },
-  categoryIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  iconText: {
-    fontSize: 20,
-    color: '#000',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -233,47 +168,6 @@ const styles = StyleSheet.create({
     textShadowColor: 'transparent',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
-  },
-  promoCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 24,
-    height: 180,
-    padding: 24,
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  promoContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  promoBrand: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#000',
-    fontStyle: 'italic',
-    lineHeight: 40,
-  },
-  discountBadge: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  discountTextSmall: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#000',
-    letterSpacing: 1,
-  },
-  discountTextLarge: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-    marginVertical: 2,
   },
   spacer: {
     height: 40,

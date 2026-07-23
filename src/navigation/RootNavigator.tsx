@@ -9,9 +9,21 @@ const Stack = createNativeStackNavigator();
 export default function RootNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: '#FFFFFF' },
+          animation: 'slide_from_right',
+        }}
+      >
         <Stack.Screen name="Main" component={TabNavigator} />
-        <Stack.Screen name="Medicines" component={MedicinesScreen} />
+        <Stack.Screen
+          name="Medicines"
+          component={MedicinesScreen}
+          options={{
+            contentStyle: { backgroundColor: '#FFFFFF' },
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
