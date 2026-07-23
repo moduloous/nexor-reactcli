@@ -23,7 +23,8 @@ export interface AppState {
   // Auth
   isAuthenticated: boolean;
   isLoading: boolean;
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
 
   // User
   user: UserProfile | null;
@@ -33,7 +34,7 @@ export interface AppState {
   cartTotal: number;
 
   // Auth Actions
-  setAuth: (token: string, user: UserProfile) => void;
+  setAuth: (accessToken: string, refreshToken: string, user: UserProfile | any) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
 
@@ -53,21 +54,28 @@ const calculateTotal = (cart: CartItem[]): number =>
 
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial State
-  isAuthenticated: false,
+  isAuthenticated: true,
   isLoading: false,
-  token: null,
-  user: null,
+  accessToken: 'mock-token',
+  refreshToken: 'mock-refresh',
+  user: {
+    id: 'mock-id',
+    name: 'Guest User',
+    email: 'guest@example.com',
+    phone: '0000000000'
+  },
   cart: [],
   cartTotal: 0,
 
   // Auth Actions
-  setAuth: (token, user) =>
-    set({ isAuthenticated: true, token, user }),
+  setAuth: (accessToken, refreshToken, user) =>
+    set({ isAuthenticated: true, accessToken, refreshToken, user }),
 
   logout: () =>
     set({
       isAuthenticated: false,
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       user: null,
       cart: [],
       cartTotal: 0,

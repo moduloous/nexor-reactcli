@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "541630324100",
+    "project_id": "nexor-ec1ac",
+    "storage_bucket": "nexor-ec1ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:541630324100:android:10d1db1175844e0285d1d1",
+        "android_client_info": {
+          "package_name": "com.nexor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "541630324100-cdg1jlptcjeibfethmalvte3bnl4lppo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVY06JUujMz1L0IdI7dFmvyBl0QrRcy88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "541630324100-cdg1jlptcjeibfethmalvte3bnl4lppo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

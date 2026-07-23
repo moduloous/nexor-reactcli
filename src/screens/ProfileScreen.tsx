@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text } from '../components/Text';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAppStore } from '../store/useAppStore';
 
@@ -42,7 +43,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0F',
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -66,8 +67,8 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: '#000',
     marginBottom: 4,
   },
   email: {
@@ -81,8 +82,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '500',
+    color: '#000',
     marginBottom: 8,
   },
   subtitle: {
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   logoutBtn: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#F5F5F5',
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 12,
