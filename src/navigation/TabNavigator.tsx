@@ -1,8 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Animated, View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
-import LinearGradient from 'react-native-linear-gradient';
+import { Animated, View, Text, TouchableOpacity, StyleSheet, Platform, Image } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -22,28 +20,25 @@ const GridScreen = () => (
   </View>
 );
 
-const BUBBLE_WIDTH = 56;
-const BUBBLE_HEIGHT = 52;
-const BUBBLE_RADIUS = 18;
-const PILL_HEIGHT = 68;
-const BUBBLE_TOP = (PILL_HEIGHT - BUBBLE_HEIGHT) / 2;
-const PILL_RADIUS = 34;
-const RIM_THICKNESS = 1.5;
+const BUBBLE_SIZE = 56;
+const PILL_HEIGHT = 72;
+const BUBBLE_TOP = (PILL_HEIGHT - BUBBLE_SIZE) / 2;
+const PILL_RADIUS = 36;
 
 export type TabKey = 'Home' | 'Flash' | 'Grid' | 'Orders' | 'Profile';
 
 interface Tab {
   key: TabKey;
-  label: string;
-  iconName: string;
+  iconName?: string;
+  imageUrl?: string;
 }
 
 const TABS: Tab[] = [
-  { key: 'Home', label: 'Home', iconName: 'home' },
-  { key: 'Flash', label: 'Flash', iconName: 'zap' },
-  { key: 'Grid', label: 'Grid', iconName: 'grid' },
-  { key: 'Orders', label: 'Orders', iconName: 'menu' },
-  { key: 'Profile', label: 'Profile', iconName: 'user' },
+  { key: 'Home', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/home.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2hvbWUucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3Njc1NSwiZXhwIjoxODc5NDg0NzU1fQ.TfVnsiJCDJJTR9WEMlwgNuHxGKZ3ERQbqrwTDyIK-Tg' },
+  { key: 'Flash', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/flash.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2ZsYXNoLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ4NzY1MzMsImV4cCI6MTg3OTQ4NDUzM30.Cwn0FKv39NF7NSvIrLuH21WUPXs6w1ipS5jqKTzwL3E' },
+  { key: 'Grid', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/grid.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2dyaWQucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3NjcyNCwiZXhwIjoxODc5NDg0NzI0fQ.531ha98tIHfuElen4K0MqqVgmoWNnbhkhcF_-7ybQDo' },
+  { key: 'Orders', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/orders.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL29yZGVycy5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODc3MTA3LCJleHAiOjE4Nzk0ODUxMDd9.zhEzhyjctmSu06gUThsXodD9lH0oQf_-a7JrCnTV7SU' },
+  { key: 'Profile', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/profile.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL3Byb2ZpbGUucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3NzEzOCwiZXhwIjoxODc5NDg1MTM4fQ.VQlgVIYK8fUZepJAXR6ujphvqOqnbtIooZVRczXenYM' },
 ];
 
 const TabButton = memo(function TabButton({
@@ -67,18 +62,25 @@ const TabButton = memo(function TabButton({
       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
     >
       <View ref={iconRef} collapsable={false} style={styles.iconWrap}>
-        <Feather
-          name={tab.iconName}
-          size={20}
-          color={active ? '#FFFFFF' : 'rgba(255,255,255,0.65)'}
-        />
+        {tab.imageUrl ? (
+          <Image
+            source={{ uri: tab.imageUrl }}
+            style={{ width: 26, height: 26, tintColor: active ? '#13141C' : '#FFFFFF' }}
+            resizeMode="contain"
+          />
+        ) : (
+          <Feather
+            name={tab.iconName!}
+            size={24}
+            color={active ? '#13141C' : '#FFFFFF'}
+          />
+        )}
       </View>
-      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
     </TouchableOpacity>
   );
 });
 
-function GlassBottomNav({ state, descriptors, navigation }: any) {
+function SolidBottomNav({ state, descriptors, navigation }: any) {
   const activeTab = state.routes[state.index].name as TabKey;
 
   const onTabPress = useCallback(
@@ -116,7 +118,7 @@ function GlassBottomNav({ state, descriptors, navigation }: any) {
       // @ts-ignore
       rowNode,
       (x: number, _y: number, width: number) => {
-        const targetX = x + width / 2 - BUBBLE_WIDTH / 2;
+        const targetX = x + width / 2 - BUBBLE_SIZE / 2;
 
         if (!hasPositioned.current) {
           bubbleX.setValue(targetX);
@@ -125,8 +127,8 @@ function GlassBottomNav({ state, descriptors, navigation }: any) {
           Animated.spring(bubbleX, {
             toValue: targetX,
             useNativeDriver: true,
-            friction: 8,
-            tension: 90,
+            friction: 7,
+            tension: 80,
           }).start();
         }
       },
@@ -140,61 +142,25 @@ function GlassBottomNav({ state, descriptors, navigation }: any) {
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      <View style={styles.shadowWrap}>
-        <LinearGradient
-          colors={[
-            'rgba(255,255,255,0.85)',
-            'rgba(255,255,255,0.2)',
-            'rgba(255,255,255,0.05)',
-            'rgba(255,255,255,0.2)',
-          ]}
-          locations={[0, 0.28, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.rim}
-        >
-          <View style={styles.pill}>
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType="dark"
-              blurAmount={22}
-              reducedTransparencyFallbackColor="rgba(20,20,45,0.85)"
+      <View style={styles.pill}>
+        <View style={styles.row} ref={rowRef} onLayout={positionBubble}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.bubble, { transform: [{ translateX: bubbleX }] }]}
+          />
+
+          {TABS.map((tab, index) => (
+            <TabButton
+              key={tab.key}
+              tab={tab}
+              active={activeTab === tab.key}
+              onPress={onTabPress}
+              iconRef={(node) => {
+                iconRefs.current[index] = node;
+              }}
             />
-
-            <LinearGradient
-              colors={['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.08)']}
-              locations={[0, 0.45, 1]}
-              start={{ x: 0.15, y: -0.2 }}
-              end={{ x: 0.7, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.24)']}
-              style={styles.innerBottomShadow}
-              pointerEvents="none"
-            />
-
-            <View style={styles.row} ref={rowRef} onLayout={positionBubble}>
-              <Animated.View
-                pointerEvents="none"
-                style={[styles.bubble, { transform: [{ translateX: bubbleX }] }]}
-              />
-
-              {TABS.map((tab, index) => (
-                <TabButton
-                  key={tab.key}
-                  tab={tab}
-                  active={activeTab === tab.key}
-                  onPress={onTabPress}
-                  iconRef={(node) => {
-                    iconRefs.current[index] = node;
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        </LinearGradient>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -205,7 +171,7 @@ const Tab = createBottomTabNavigator();
 export default function TabNavigator() {
   return (
     <Tab.Navigator
-      tabBar={props => <GlassBottomNav {...props} />}
+      tabBar={props => <SolidBottomNav {...props} />}
       screenOptions={{
         headerShown: false,
         animation: 'none',
@@ -225,55 +191,44 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 24,
+    bottom: 30,
     alignItems: 'center',
   },
-  shadowWrap: {
+  pill: {
     width: '90%',
+    height: PILL_HEIGHT,
     borderRadius: PILL_RADIUS,
+    backgroundColor: '#13141C',
+    flexDirection: 'row',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
-        shadowOpacity: 0.4,
-        shadowRadius: 22,
-        shadowOffset: { width: 6, height: 14 },
+        shadowOpacity: 0.25,
+        shadowRadius: 15,
+        shadowOffset: { width: 0, height: 8 },
       },
       android: {
-        elevation: 12,
+        elevation: 8,
       },
     }),
-  },
-  rim: {
-    borderRadius: PILL_RADIUS,
-    padding: RIM_THICKNESS,
-  },
-  pill: {
-    flexDirection: 'row',
-    height: PILL_HEIGHT,
-    borderRadius: PILL_RADIUS - RIM_THICKNESS,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(20,20,45,0.4)',
-  },
-  innerBottomShadow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 22,
   },
   row: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
   },
   tabButton: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    height: '100%',
   },
   iconWrap: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -281,31 +236,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: BUBBLE_TOP,
     left: 0,
-    width: BUBBLE_WIDTH,
-    height: BUBBLE_HEIGHT,
-    borderRadius: BUBBLE_RADIUS,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#FFFFFF',
-        shadowOpacity: 0.35,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 0 },
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
-  },
-  tabLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.65)',
-    fontWeight: '500',
-  },
-  tabLabelActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    width: BUBBLE_SIZE,
+    height: BUBBLE_SIZE,
+    borderRadius: BUBBLE_SIZE / 2,
+    backgroundColor: '#FFFFFF',
   },
 });

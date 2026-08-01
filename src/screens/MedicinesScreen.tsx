@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   StyleSheet,
@@ -8,15 +9,18 @@ import {
   Image,
   Dimensions,
   Platform,
+  Alert,
 } from 'react-native';
+import axios from 'axios';
 import { Text } from '../components/Text';
 import { TextInput } from '../components/TextInput';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
 
-const CATEGORIES = ['OTC', 'Supplements', 'Ayurveda', 'Personal Care', 'Devices'];
+const CATEGORIES = ['All Medicines', 'Supplements', 'Ayurveda', 'Personal Care', 'Devices'];
 
 const BENTO_DATA = [
   // Row 1: 2 items
@@ -36,8 +40,40 @@ const BENTO_DATA = [
 ];
 
 export default function MedicinesScreen({ navigation }: any) {
-  const [activeTab, setActiveTab] = useState('OTC');
+  const [activeTab, setActiveTab] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (searchQuery.trim().length > 1) {
+      const fetchSuggestions = async () => {
+        setIsSearching(true);
+        const { data } = await supabase
+          .from('medicine_products')
+          .select('id, name, dosage_form')
+          .ilike('name', `%${searchQuery.trim()}%`)
+          .limit(5);
+        
+        if (data) {
+          setSuggestions(data);
+        }
+        setIsSearching(false);
+      };
+      
+      const timeoutId = setTimeout(fetchSuggestions, 300);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSuggestions([]);
+    }
+  }, [searchQuery]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setActiveTab('');
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -68,21 +104,78 @@ export default function MedicinesScreen({ navigation }: any) {
         </View>
 
         {/* Search + Scan (scan inside the bar) */}
-        <View style={styles.searchBar}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search medicine"
-            placeholderTextColor="#9B95A8"
-          />
-          <TouchableOpacity style={styles.scanButton}>
-            <Feather name="maximize" size={15} color="#FFF" />
-            <Text style={styles.scanText}>Scan</Text>
-          </TouchableOpacity>
+        <View style={{ zIndex: 10 }}>
+          <View style={styles.searchBar}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search medicine"
+              placeholderTextColor="#9B95A8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                if (searchQuery.trim()) {
+                  setSuggestions([]);
+                  navigation.navigate('AllMedicines', { filter: 'Search', searchQuery: searchQuery.trim() });
+                }
+              }}
+            />
+            <TouchableOpacity style={styles.scanButton}>
+              <Feather name="maximize" size={15} color="#FFF" />
+              <Text style={styles.scanText}>Scan</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              {suggestions.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.suggestionItem, index < suggestions.length - 1 && styles.suggestionBorder]}
+                  onPress={() => {
+                    setSearchQuery(item.name);
+                    setSuggestions([]);
+                    navigation.navigate('AllMedicines', { filter: 'Search', searchQuery: item.name });
+                  }}
+                >
+                  <Feather name="search" size={14} color="#9B95A8" style={{ marginRight: 8 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.suggestionName} numberOfLines={1}>{item.name}</Text>
+                  </View>
+                  <Text style={styles.suggestionType}>{item.dosage_form}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Quick Action Boxes */}
         <View style={styles.quickActionsRow}>
-          <TouchableOpacity style={styles.quickActionBox}>
+          <TouchableOpacity 
+            style={styles.quickActionBox}
+            onPress={async () => {
+              Alert.alert('Upload Prescription', 'Simulating prescription upload to the dashboard...', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Upload', onPress: async () => {
+                    try {
+                      const DASHBOARD_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+                      await axios.post(`${DASHBOARD_URL}/api/orders`, {
+                        store_id: "d4d70946-1ac4-4bb4-9f09-1b98f59e880b",
+                        user_email: "prescription_user@example.com",
+                        total_amount: 0,
+                        status: "PENDING_PRESCRIPTION",
+                        items: [],
+                        delivery_address: "HSR Layout, Bangalore",
+                        prescription_url: "https://example.com/mock-prescription.jpg"
+                      });
+                      Alert.alert('Success', 'Prescription sent to Pharmacy Dashboard!');
+                    } catch (e) {
+                      Alert.alert('Error', 'Failed to send to Dashboard.');
+                    }
+                }}
+              ]);
+            }}
+          >
             <Image 
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/order%20via.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvb3JkZXIgdmlhLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ4MjQyOTgsImV4cCI6MTg3OTQzMjI5OH0.PKiSYNKmTVrc9xpCXfTEodZOHSl-H4w4FvS6FiMmdkk' }}
               style={styles.quickActionImage}
@@ -127,7 +220,16 @@ export default function MedicinesScreen({ navigation }: any) {
             return (
               <TouchableOpacity
                 key={cat}
-                onPress={() => setActiveTab(cat)}
+                onPress={() => {
+                  setActiveTab(cat);
+                  if (cat === 'All Medicines') {
+                    navigation.navigate('AllMedicines');
+                  } else if (cat === 'Supplements') {
+                    navigation.navigate('AllMedicines', { filter: 'Supplements' });
+                  } else {
+                    navigation.navigate('CategoryComingSoon', { category: cat });
+                  }
+                }}
                 style={styles.tabItem}
               >
                 <Text style={[styles.tabText, active && styles.tabTextActive]}>
@@ -148,6 +250,7 @@ export default function MedicinesScreen({ navigation }: any) {
                 styles.bentoCard,
                 { backgroundColor: item.color, height: item.height, width: item.width as any },
               ]}
+              onPress={() => navigation.navigate('AllMedicines', { filter: 'Condition', categoryId: item.id })}
             >
               <Text style={styles.masonryTitle}>{item.title}</Text>
               {item.image && (
@@ -242,6 +345,47 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#E8E4F0',
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#E8E4F0',
+    zIndex: 20,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  suggestionBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EFF5',
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A24',
+  },
+  suggestionType: {
+    fontSize: 11,
+    color: '#9B95A8',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   quickActionsRow: {
     flexDirection: 'row',

@@ -54,16 +54,11 @@ const calculateTotal = (cart: CartItem[]): number =>
 
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial State
-  isAuthenticated: true,
+  isAuthenticated: false,
   isLoading: false,
-  accessToken: 'mock-token',
-  refreshToken: 'mock-refresh',
-  user: {
-    id: 'mock-id',
-    name: 'Guest User',
-    email: 'guest@example.com',
-    phone: '0000000000'
-  },
+  accessToken: null,
+  refreshToken: null,
+  user: null,
   cart: [],
   cartTotal: 0,
 

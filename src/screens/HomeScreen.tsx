@@ -12,6 +12,7 @@ import { Text } from '../components/Text';
 import { TextInput } from '../components/TextInput';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Feather from 'react-native-vector-icons/Feather';
 
 const { width, height } = Dimensions.get('window');
 
@@ -53,8 +54,20 @@ export default function HomeScreen({ navigation }: any) {
         </View>
 
         <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.searchContainer}>
-          <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/searchbar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvc2VhcmNoYmFyLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ0NjQsImV4cCI6MTg3OTMxMjQ2NH0.XTKuRDagScS_4aVKJ6SHFbimzWM0P6iFosNJL7T4dIY' }} style={styles.searchIcon} resizeMode="contain" />
-          <TextInput style={styles.searchInput} placeholder="Search" placeholderTextColor="#8E8E93" value={search} onChangeText={setSearch} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search"
+            placeholderTextColor="#9B95A8"
+            value={search}
+            onChangeText={setSearch}
+          />
+          <TouchableOpacity style={styles.scanButton}>
+            <Image 
+              source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/search%20bar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL3NlYXJjaCBiYXIucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3ODkwNywiZXhwIjoxODc5NDg2OTA3fQ.gbg6t6tRsIsRiX9P4U_9n2bOhLLLLEJbYjcJJOd5fz4' }}
+              style={styles.searchRightIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.grid}>
@@ -72,6 +85,11 @@ export default function HomeScreen({ navigation }: any) {
 
         <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.dealsSection}>
           <Text style={styles.dealsTitle}>Today's deals !</Text>
+          <Image
+            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/banners/medicine%20home%20banner.jpeg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYW5uZXJzL21lZGljaW5lIGhvbWUgYmFubmVyLmpwZWciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODc3NTQ0LCJleHAiOjE4MTY0MTM1NDR9.YmJtNezToZLN-vGwbeplwx3f0wz83StpI-_7xav0JFo' }}
+            style={styles.dealsBanner}
+            resizeMode="cover"
+          />
         </Animated.View>
 
         <View style={styles.spacer} />
@@ -110,44 +128,51 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 46,
+    backgroundColor: '#F3F1F8',
+    borderRadius: 30,
+    paddingLeft: 22,
+    paddingRight: 6,
+    height: 54,
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  searchIcon: {
-    width: 26,
-    height: 26,
-    marginRight: 12,
+    borderColor: '#E8E4F0',
   },
   searchInput: {
     flex: 1,
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '300',
-    letterSpacing: 0.5,
+    fontSize: 15,
+    color: '#1A1A24',
+    fontWeight: '400',
+  },
+  scanButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#302D3A',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  searchRightIcon: {
+    width: 20,
+    height: 20,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 0,
   },
   categoryItem: {
     width: '19%',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
   },
   categoryIcon: {
-    fontSize: 48,
+    fontSize: 58,
   },
   categoryImage: {
-    width: 56,
-    height: 56,
-    marginBottom: 8,
+    width: 68,
+    height: 68,
+    marginBottom: 10,
   },
   categoryTitle: {
     fontSize: 14,
@@ -157,7 +182,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   dealsSection: {
-    marginTop: 'auto',
+    marginTop: -4,
   },
   dealsTitle: {
     fontSize: 24,
@@ -168,6 +193,11 @@ const styles = StyleSheet.create({
     textShadowColor: 'transparent',
     textShadowOffset: { width: -1, height: 1 },
     textShadowRadius: 10,
+  },
+  dealsBanner: {
+    width: '100%',
+    height: 160,
+    borderRadius: 20,
   },
   spacer: {
     height: 40,
