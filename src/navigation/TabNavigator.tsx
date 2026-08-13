@@ -8,22 +8,32 @@ import SearchScreen from '../screens/SearchScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
-const FlashScreen = () => (
-  <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' }}>
-    <Text style={{ color: '#000', fontSize: 24 }}>Flash</Text>
-  </View>
-);
+import FlashScreen from '../screens/FlashScreen';
 
 const GridScreen = () => (
-  <View style={{ flex: 1, backgroundColor: '#FFF', justifyContent: 'center', alignItems: 'center' }}>
-    <Text style={{ color: '#000', fontSize: 24 }}>Grid</Text>
+  <View style={{ flex: 1, backgroundColor: '#F9F8FC', justifyContent: 'center', alignItems: 'center' }}>
+    <View style={{ width: '100%', alignItems: 'center', transform: [{ translateY: -120 }] }}>
+      <View style={{ width: '100%', height: 600, justifyContent: 'center', alignItems: 'center', marginTop: -60 }}>
+        <Image 
+          source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/grid%20icons/gridcard.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJncmlkIGljb25zL2dyaWRjYXJkLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODY0NTk3NzQsImV4cCI6MTgxNzk5NTc3NH0.98hpNR_AEA2CKR_sALQH8mWaJ9oMyROqr3S0CJ2BXh0' }} 
+          style={{ width: '100%', height: '100%', position: 'absolute' }}
+          resizeMode="contain"
+        />
+      </View>
+      <Text style={{ fontSize: 18, color: '#000', fontFamily: 'Figtree-Medium', marginTop: -60, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 30 }}>
+        Your personalized space to dump your moments
+      </Text>
+      <Text style={{ fontSize: 22, color: '#000', fontFamily: 'Figtree-Bold', marginTop: 12, textAlign: 'center' }}>
+        Launching soon
+      </Text>
+    </View>
   </View>
 );
 
-const BUBBLE_SIZE = 56;
-const PILL_HEIGHT = 72;
+const BUBBLE_SIZE = 46;
+const PILL_HEIGHT = 60;
 const BUBBLE_TOP = (PILL_HEIGHT - BUBBLE_SIZE) / 2;
-const PILL_RADIUS = 36;
+const PILL_RADIUS = 30;
 
 export type TabKey = 'Home' | 'Flash' | 'Grid' | 'Orders' | 'Profile';
 
@@ -36,8 +46,8 @@ interface Tab {
 const TABS: Tab[] = [
   { key: 'Home', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/home.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2hvbWUucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3Njc1NSwiZXhwIjoxODc5NDg0NzU1fQ.TfVnsiJCDJJTR9WEMlwgNuHxGKZ3ERQbqrwTDyIK-Tg' },
   { key: 'Flash', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/flash.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2ZsYXNoLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ4NzY1MzMsImV4cCI6MTg3OTQ4NDUzM30.Cwn0FKv39NF7NSvIrLuH21WUPXs6w1ipS5jqKTzwL3E' },
-  { key: 'Grid', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/grid.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2dyaWQucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3NjcyNCwiZXhwIjoxODc5NDg0NzI0fQ.531ha98tIHfuElen4K0MqqVgmoWNnbhkhcF_-7ybQDo' },
   { key: 'Orders', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/orders.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL29yZGVycy5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODc3MTA3LCJleHAiOjE4Nzk0ODUxMDd9.zhEzhyjctmSu06gUThsXodD9lH0oQf_-a7JrCnTV7SU' },
+  { key: 'Grid', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/grid.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL2dyaWQucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3NjcyNCwiZXhwIjoxODc5NDg0NzI0fQ.531ha98tIHfuElen4K0MqqVgmoWNnbhkhcF_-7ybQDo' },
   { key: 'Profile', imageUrl: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/profile.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL3Byb2ZpbGUucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3NzEzOCwiZXhwIjoxODc5NDg1MTM4fQ.VQlgVIYK8fUZepJAXR6ujphvqOqnbtIooZVRczXenYM' },
 ];
 
@@ -65,13 +75,13 @@ const TabButton = memo(function TabButton({
         {tab.imageUrl ? (
           <Image
             source={{ uri: tab.imageUrl }}
-            style={{ width: 26, height: 26, tintColor: active ? '#13141C' : '#FFFFFF' }}
+            style={{ width: 22, height: 22, tintColor: active ? '#13141C' : '#FFFFFF' }}
             resizeMode="contain"
           />
         ) : (
           <Feather
             name={tab.iconName!}
-            size={24}
+            size={22}
             color={active ? '#13141C' : '#FFFFFF'}
           />
         )}
@@ -179,8 +189,8 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Flash" component={FlashScreen} />
-      <Tab.Screen name="Grid" component={GridScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
+      <Tab.Screen name="Grid" component={GridScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -195,7 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pill: {
-    width: '90%',
+    width: '78%',
     height: PILL_HEIGHT,
     borderRadius: PILL_RADIUS,
     backgroundColor: '#13141C',
@@ -227,8 +237,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   iconWrap: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

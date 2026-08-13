@@ -6,14 +6,17 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
-  ActivityIndicator,
   FlatList,
   Image,
+  Animated,
+  Easing,
 } from 'react-native';
+import { CustomLoader } from '../components/CustomLoader';
 import { Text } from '../components/Text';
 import { TextInput } from '../components/TextInput';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
 
@@ -93,13 +96,60 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
   
   const [activeCategory, setActiveCategory] = useState(route?.params?.categoryId || categories[0].id);
   const [medicines, setMedicines] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [localQuery, setLocalQuery] = useState(route?.params?.searchQuery || '');
   const [searchQuery, setSearchQuery] = useState(route?.params?.searchQuery || '');
   const insets = useSafeAreaInsets();
   
   const cart = useAppStore((state) => state.cart);
   const addToCart = useAppStore((state) => state.addToCart);
+  const updateQuantity = useAppStore((state) => state.updateQuantity);
+
+  // Animation Refs & State
+  const cartIconRef = useRef<View>(null);
+  const cartScale = useRef(new Animated.Value(1)).current;
+  const [cartIconPos, setCartIconPos] = useState({ x: width - 40, y: 50 });
+  const [flyingDots, setFlyingDots] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Measure cart icon position after a small delay to ensure layout
+    setTimeout(() => {
+      cartIconRef.current?.measure((x, y, w, h, pageX, pageY) => {
+        setCartIconPos({ x: pageX + w / 2, y: pageY + h / 2 });
+      });
+    }, 500);
+  }, []);
+
+  const handleAddToCart = (item: any, event: any) => {
+    // Get touch coordinates for the flying animation
+    const { pageX, pageY } = event.nativeEvent;
+    
+    addToCart({
+      id: item.id,
+      name: item.name,
+      price: item.price || 0,
+      module: 'medicine'
+    });
+
+    // Create flying dot animation
+    const id = Date.now().toString() + Math.random();
+    const anim = new Animated.Value(0);
+    setFlyingDots(prev => [...prev, { id, startX: pageX, startY: pageY, anim }]);
+
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 400, // Pop and drop speed
+      useNativeDriver: true,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1) // Smooth ease out
+    }).start(() => {
+      setFlyingDots(prev => prev.filter(d => d.id !== id));
+      // Pop the cart icon when dot arrives
+      Animated.sequence([
+        Animated.timing(cartScale, { toValue: 1.25, duration: 120, useNativeDriver: true }),
+        Animated.timing(cartScale, { toValue: 1, duration: 120, useNativeDriver: true })
+      ]).start();
+    });
+  };
 
   const activeCategoryData = categories.find(c => c.id === activeCategory);
 
@@ -116,6 +166,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
       if (!activeCategoryData) return;
       
       setLoading(true);
+      const startTime = Date.now();
       const categoryName = activeCategoryData.name.replace('\n', ' ');
       
       let searchCategory = categoryName;
@@ -153,6 +204,11 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
         const mixedData = [...data].sort(() => 0.5 - Math.random());
         setMedicines(mixedData.slice(0, 100));
       }
+      
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise(resolve => setTimeout(() => resolve(undefined), 500 - elapsed));
+      }
       setLoading(false);
     }
     
@@ -169,14 +225,16 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
           <Feather name="arrow-left" size={22} color="#1A1A24" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isSearch ? 'Search Results' : isSupplements ? 'Supplements' : isConditions ? 'By Condition' : 'All Medicines'}</Text>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Cart')}>
-          <Feather name="shopping-cart" size={20} color="#1A1A24" />
-          {cart.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cart.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: cartScale }] }} ref={cartIconRef}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Cart')}>
+            <Feather name="shopping-cart" size={20} color="#1A1A24" />
+            {cart.length > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{cart.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       <View style={styles.contentContainer}>
@@ -232,7 +290,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
 
           {loading ? (
             <View style={styles.stateContainer}>
-              <ActivityIndicator size="large" color="#4A90E2" />
+              <CustomLoader size={40} />
             </View>
           ) : medicines.length === 0 ? (
             <View style={styles.stateContainer}>
@@ -284,22 +342,38 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                         ₹{item.price ? item.price.toFixed(2) : '0.00'}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.cartButton}
-                      onPress={() => addToCart({
-                        id: item.id,
-                        name: item.name,
-                        price: item.price || 0,
-                        module: 'medicine'
-                      })}
-                    >
-                      <Image 
-                        source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/add.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvYWRkLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODUzMDg5OTYsImV4cCI6MTg3OTkxNjk5Nn0.VSui_Xn0DtUi7oeYuN7mq3VBG10DkHTIy4V-eWPcU40' }}
-                        style={{ width: 12, height: 12, marginRight: 4 }}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.cartButtonText}>Add</Text>
-                    </TouchableOpacity>
+                    {(() => {
+                      const cartItem = cart.find(i => i.id === item.id);
+                      const qty = cartItem ? cartItem.quantity : 0;
+                      
+                      if (qty > 0) {
+                        return (
+                          <View style={styles.quantityContainer}>
+                            <TouchableOpacity style={styles.qtyButton} onPress={() => updateQuantity(item.id, qty - 1)}>
+                              <Feather name="minus" size={12} color="#1A1A24" />
+                            </TouchableOpacity>
+                            <Text style={styles.qtyText}>{qty}</Text>
+                            <TouchableOpacity style={styles.qtyButton} onPress={() => updateQuantity(item.id, qty + 1)}>
+                              <Feather name="plus" size={12} color="#1A1A24" />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+
+                      return (
+                        <TouchableOpacity
+                          style={styles.cartButton}
+                          onPress={(evt) => handleAddToCart(item, evt)}
+                        >
+                          <Image 
+                            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/add.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvYWRkLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODUzMDg5OTYsImV4cCI6MTg3OTkxNjk5Nn0.VSui_Xn0DtUi7oeYuN7mq3VBG10DkHTIy4V-eWPcU40' }}
+                            style={{ width: 12, height: 12, marginRight: 4 }}
+                            resizeMode="contain"
+                          />
+                          <Text style={styles.cartButtonText}>Add</Text>
+                        </TouchableOpacity>
+                      );
+                    })()}
                   </View>
                 </View>
               )}
@@ -308,6 +382,54 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
           )}
         </View>
       </View>
+
+      {/* Flying Dots Overlay */}
+      {flyingDots.map(dot => {
+        const translateX = dot.anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [dot.startX, cartIconPos.x]
+        });
+        
+        // Add a slight arc/curve to the drop
+        const translateY = dot.anim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [dot.startY, dot.startY - 30, cartIconPos.y]
+        });
+        
+        const scale = dot.anim.interpolate({
+          inputRange: [0, 0.2, 0.8, 1],
+          outputRange: [0, 1.2, 1, 0.2]
+        });
+
+        const opacity = dot.anim.interpolate({
+          inputRange: [0, 0.8, 1],
+          outputRange: [1, 1, 0]
+        });
+
+        return (
+          <Animated.View
+            key={dot.id}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: 16,
+              height: 16,
+              borderRadius: 8,
+              backgroundColor: '#4A90E2', // Nexor blue
+              zIndex: 9999,
+              left: -8, // Offset center
+              top: -8,  // Offset center
+              transform: [{ translateX }, { translateY }, { scale }],
+              opacity,
+              shadowColor: '#4A90E2',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.6,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -542,6 +664,35 @@ const styles = StyleSheet.create({
     color: '#1A1A24',
     fontSize: 12,
     fontWeight: '700',
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E8E4F0',
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 10,
+    height: 28,
+  },
+  qtyButton: {
+    paddingHorizontal: 10,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1A1A24',
+    minWidth: 12,
+    textAlign: 'center',
   },
   bottomRow: {
     flexDirection: 'row',

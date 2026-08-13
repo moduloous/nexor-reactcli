@@ -82,7 +82,7 @@ android {
         abi {
             reset()
             enable true
-            universalApk false  // Change to true to also generate a fat APK
+            universalApk true  // Change to true to also generate a fat APK
             include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }

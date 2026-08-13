@@ -62,7 +62,7 @@ export default function HomeScreen({ navigation }: any) {
             onChangeText={setSearch}
           />
           <TouchableOpacity style={styles.scanButton}>
-            <Image 
+            <Image
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/search%20bar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL3NlYXJjaCBiYXIucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3ODkwNywiZXhwIjoxODc5NDg2OTA3fQ.gbg6t6tRsIsRiX9P4U_9n2bOhLLLLEJbYjcJJOd5fz4' }}
               style={styles.searchRightIcon}
               resizeMode="contain"
@@ -72,7 +72,18 @@ export default function HomeScreen({ navigation }: any) {
 
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.grid}>
           {CATEGORIES.map((cat, index) => (
-            <TouchableOpacity key={cat.id} style={styles.categoryItem} activeOpacity={0.7} onPress={() => { if (cat.id === 'medicine') { navigation.navigate('Medicines'); } }}>
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (cat.id === 'medicine') {
+                  navigation.navigate('Medicines');
+                } else {
+                  navigation.navigate('CategoryComingSoon', { category: cat.title });
+                }
+              }}
+            >
               {cat.imageUrl ? (
                 <Image source={{ uri: cat.imageUrl }} style={styles.categoryImage} resizeMode="contain" />
               ) : (
@@ -162,24 +173,23 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   categoryItem: {
-    width: '19%',
+    width: '20%',
     alignItems: 'center',
     marginBottom: 28,
   },
   categoryIcon: {
-    fontSize: 58,
+    fontSize: 44,
   },
   categoryImage: {
-    width: 68,
-    height: 68,
-    marginBottom: 10,
+    width: 52,
+    height: 52,
+    marginBottom: 4,
   },
   categoryTitle: {
-    fontSize: 14,
+    fontSize: 10,
     color: '#333333',
     textAlign: 'center',
     fontWeight: 'bold',
-    letterSpacing: 0.5,
   },
   dealsSection: {
     marginTop: -4,

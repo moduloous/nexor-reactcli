@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
@@ -8,15 +8,19 @@ import MedicinesScreen from '../screens/MedicinesScreen';
 import CategoryComingSoonScreen from '../screens/CategoryComingSoonScreen';
 import AllMedicinesScreen from '../screens/AllMedicinesScreen';
 import CartScreen from '../screens/CartScreen';
+import PrescriptionOrderScreen from '../screens/PrescriptionOrderScreen';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
+import { CustomAlertModal } from '../components/CustomAlertModal';
+
+import { CustomLoader } from '../components/CustomLoader';
 
 const Stack = createNativeStackNavigator();
 
 function LoadingScreen() {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-      <ActivityIndicator size="large" color="#4A90E2" />
+      <CustomLoader size={60} />
     </View>
   );
 }
@@ -63,44 +67,52 @@ export default function RootNavigator() {
   }, []);
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#FFFFFF' },
-          animation: 'slide_from_right',
-        }}
-      >
-        {isLoading ? (
-          <Stack.Screen name="Loading" component={LoadingScreen} />
-        ) : isAuthenticated ? (
-          <>
-            <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen
-              name="Medicines"
-              component={MedicinesScreen}
-              options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
-            />
-            <Stack.Screen
-              name="AllMedicines"
-              component={AllMedicinesScreen}
-              options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
-            />
-            <Stack.Screen
-              name="CategoryComingSoon"
-              component={CategoryComingSoonScreen}
-              options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
-            />
-            <Stack.Screen
-              name="Cart"
-              component={CartScreen}
-              options={{ contentStyle: { backgroundColor: '#F9F8FC' } }}
-            />
-          </>
-        ) : (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#FFFFFF' },
+            animation: 'slide_from_right',
+          }}
+        >
+          {isLoading ? (
+            <Stack.Screen name="Loading" component={LoadingScreen} />
+          ) : isAuthenticated ? (
+            <>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen
+                name="Medicines"
+                component={MedicinesScreen}
+                options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
+              />
+              <Stack.Screen
+                name="PrescriptionOrder"
+                component={PrescriptionOrderScreen}
+                options={{ contentStyle: { backgroundColor: '#F9F8FC' } }}
+              />
+              <Stack.Screen
+                name="AllMedicines"
+                component={AllMedicinesScreen}
+                options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
+              />
+              <Stack.Screen
+                name="CategoryComingSoon"
+                component={CategoryComingSoonScreen}
+                options={{ contentStyle: { backgroundColor: '#FFFFFF' } }}
+              />
+              <Stack.Screen
+                name="Cart"
+                component={CartScreen}
+                options={{ contentStyle: { backgroundColor: '#F9F8FC' } }}
+              />
+            </>
+          ) : (
+            <Stack.Screen name="Login" component={LoginScreen} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+      <CustomAlertModal />
+    </>
   );
 }

@@ -19,6 +19,27 @@ export interface CartItem {
   module: 'food' | 'medicine' | 'shopping';
 }
 
+export interface Order {
+  id: string;
+  items: CartItem[];
+  total: number;
+  date: string;
+  status: 'Processing' | 'Completed' | 'Cancelled';
+}
+
+export interface AlertButton {
+  text: string;
+  onPress?: () => void;
+  style?: 'default' | 'cancel' | 'destructive';
+}
+
+export interface AlertData {
+  visible: boolean;
+  title: string;
+  message: string;
+  buttons?: AlertButton[];
+}
+
 export interface AppState {
   // Auth
   isAuthenticated: boolean;
@@ -33,6 +54,12 @@ export interface AppState {
   cart: CartItem[];
   cartTotal: number;
 
+  // Orders
+  orders: Order[];
+
+  // Custom Alert
+  alertData: AlertData;
+
   // Auth Actions
   setAuth: (accessToken: string, refreshToken: string, user: UserProfile | any) => void;
   logout: () => void;
@@ -43,6 +70,13 @@ export interface AppState {
   removeFromCart: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
+
+  // Order Actions
+  addOrder: (order: Order) => void;
+
+  // Alert Actions
+  showAlert: (title: string, message: string, buttons?: AlertButton[]) => void;
+  hideAlert: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -61,6 +95,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   cart: [],
   cartTotal: 0,
+  orders: [],
+  alertData: { visible: false, title: '', message: '' },
 
   // Auth Actions
   setAuth: (accessToken, refreshToken, user) =>
@@ -74,6 +110,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       user: null,
       cart: [],
       cartTotal: 0,
+      orders: [],
     }),
 
   setLoading: (loading) =>
@@ -113,4 +150,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   clearCart: () => set({ cart: [], cartTotal: 0 }),
+  
+  // Order Actions
+  addOrder: (order) => set((state) => ({ orders: [order, ...state.orders] })),
+
+  // Alert Actions
+  showAlert: (title, message, buttons) => set({ alertData: { visible: true, title, message, buttons } }),
+  hideAlert: () => set((state) => ({ alertData: { ...state.alertData, visible: false } })),
 }));
