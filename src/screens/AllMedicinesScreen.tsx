@@ -42,8 +42,8 @@ const isForChildren = (name: string) => {
   return CHILDREN_KEYWORDS.some(kw => lowerName.includes(kw));
 };
 
-const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = 90;
+const { width, height } = Dimensions.get('window');
+const SIDEBAR_WIDTH = Math.min(width * 0.23, 90); // Dynamic width for smaller devices
 
 const MEDICINE_CATEGORIES = [
   { id: '1', name: 'Tablets', icon: '💊' },
@@ -83,14 +83,14 @@ const CONDITION_CATEGORIES = [
   { id: '10', name: 'Immunity', icon: '🌿', keywords: 'name.ilike.%immun%,name.ilike.%vitamin c%,name.ilike.%limcee%' },
 ];
 
+const SEARCH_CATEGORIES = [
+  { id: 'search', name: 'Search\nResults', icon: '🔍', keywords: '' }
+];
+
 export default function AllMedicinesScreen({ route, navigation }: any) {
   const isSupplements = route?.params?.filter === 'Supplements';
   const isConditions = route?.params?.filter === 'Condition';
   const isSearch = route?.params?.filter === 'Search';
-  
-  const SEARCH_CATEGORIES = [
-    { id: 'search', name: 'Search\nResults', icon: '🔍', keywords: '' }
-  ];
   
   const categories = isSearch ? SEARCH_CATEGORIES : isSupplements ? SUPPLEMENT_CATEGORIES : isConditions ? CONDITION_CATEGORIES : MEDICINE_CATEGORIES;
   
@@ -120,35 +120,46 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
     }, 500);
   }, []);
 
+  const triggerFlyingDot = (pageX: number, pageY: number) => {
+    // Fallback coordinates if event is missing
+    const startX = pageX || width / 2;
+    const startY = pageY || height / 2;
+
+    const id = Date.now().toString() + Math.random();
+    const anim = new Animated.Value(0);
+    setFlyingDots(prev => [...prev, { id, startX, startY, anim }]);
+
+    // Wait a tiny fraction of a second to guarantee the new bubble view 
+    // has crossed the React Native bridge and successfully mounted on the screen
+    // before we command the native animation engine to start moving it.
+    setTimeout(() => {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      }).start(() => {
+        setFlyingDots(prev => prev.filter(d => d.id !== id));
+        Animated.sequence([
+          Animated.timing(cartScale, { toValue: 1.25, duration: 120, useNativeDriver: true }),
+          Animated.timing(cartScale, { toValue: 1, duration: 120, useNativeDriver: true })
+        ]).start();
+      });
+    }, 10);
+  };
+
   const handleAddToCart = (item: any, event: any) => {
-    // Get touch coordinates for the flying animation
-    const { pageX, pageY } = event.nativeEvent;
-    
+    // Extract coordinates before any synchronous state updates
+    const pageX = event?.nativeEvent?.pageX || 0;
+    const pageY = event?.nativeEvent?.pageY || 0;
+
     addToCart({
       id: item.id,
       name: item.name,
       price: item.price || 0,
       module: 'medicine'
     });
-
-    // Create flying dot animation
-    const id = Date.now().toString() + Math.random();
-    const anim = new Animated.Value(0);
-    setFlyingDots(prev => [...prev, { id, startX: pageX, startY: pageY, anim }]);
-
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 400, // Pop and drop speed
-      useNativeDriver: true,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1) // Smooth ease out
-    }).start(() => {
-      setFlyingDots(prev => prev.filter(d => d.id !== id));
-      // Pop the cart icon when dot arrives
-      Animated.sequence([
-        Animated.timing(cartScale, { toValue: 1.25, duration: 120, useNativeDriver: true }),
-        Animated.timing(cartScale, { toValue: 1, duration: 120, useNativeDriver: true })
-      ]).start();
-    });
+    triggerFlyingDot(pageX, pageY);
   };
 
   const activeCategoryData = categories.find(c => c.id === activeCategory);
@@ -306,7 +317,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <View style={[styles.productCard, (isConditions || isSearch) && { width: (width - 24 - 12) / 2 }]}>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <View style={styles.badgesContainer}>
                       {isRecommended(item.name) && (
                         <View style={styles.recommendedBadge}>
@@ -353,7 +364,12 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                               <Feather name="minus" size={12} color="#1A1A24" />
                             </TouchableOpacity>
                             <Text style={styles.qtyText}>{qty}</Text>
-                            <TouchableOpacity style={styles.qtyButton} onPress={() => updateQuantity(item.id, qty + 1)}>
+                            <TouchableOpacity style={styles.qtyButton} onPress={(evt) => {
+                              const pageX = evt?.nativeEvent?.pageX || 0;
+                              const pageY = evt?.nativeEvent?.pageY || 0;
+                              updateQuantity(item.id, qty + 1);
+                              triggerFlyingDot(pageX, pageY);
+                            }}>
                               <Feather name="plus" size={12} color="#1A1A24" />
                             </TouchableOpacity>
                           </View>
@@ -597,13 +613,11 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: (width - SIDEBAR_WIDTH - 24 - 12) / 2, // 24 for horizontal padding, 12 for gap
-    height: 120, // fixed squarish height
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
     borderColor: '#F0EFF5',
-    justifyContent: 'space-between',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -611,7 +625,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#1A1A24',
-    lineHeight: 18,
     width: '100%',
     zIndex: 2,
   },
@@ -697,8 +710,9 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     width: '100%',
+    marginTop: 8,
   },
   productPrice: {
     fontSize: 13,

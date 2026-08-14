@@ -3,6 +3,7 @@ import { View, StyleSheet, FlatList, TouchableOpacity, StatusBar, Image } from '
 import { CustomLoader } from '../components/CustomLoader';
 import { Text } from '../components/Text';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../store/useAppStore';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ export default function OrdersScreen() {
   const localOrders = useAppStore((state) => state.orders);
   const user = useAppStore((state) => state.user);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   
   const [liveOrders, setLiveOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,10 +137,22 @@ export default function OrdersScreen() {
             <Text style={styles.totalLabel}>Total Amount</Text>
             <Text style={styles.orderTotal}>₹{total.toFixed(2)}</Text>
           </View>
-          <TouchableOpacity style={styles.reorderBtn}>
-            <Feather name="refresh-cw" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.reorderText}>Reorder</Text>
-          </TouchableOpacity>
+          
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {['ACCEPTED', 'RIDER_AT_PICKUP', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(item.status) && (
+              <TouchableOpacity
+                style={[styles.reorderBtn, { backgroundColor: '#34C759' }]}
+                onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}
+              >
+                <Feather name="map-pin" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.reorderText}>Track</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.reorderBtn}>
+              <Feather name="refresh-cw" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.reorderText}>Reorder</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Animated.View>
     );

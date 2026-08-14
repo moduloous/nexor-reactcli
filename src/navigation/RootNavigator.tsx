@@ -9,6 +9,7 @@ import CategoryComingSoonScreen from '../screens/CategoryComingSoonScreen';
 import AllMedicinesScreen from '../screens/AllMedicinesScreen';
 import CartScreen from '../screens/CartScreen';
 import PrescriptionOrderScreen from '../screens/PrescriptionOrderScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { CustomAlertModal } from '../components/CustomAlertModal';
@@ -105,6 +106,11 @@ export default function RootNavigator() {
                 name="Cart"
                 component={CartScreen}
                 options={{ contentStyle: { backgroundColor: '#F9F8FC' } }}
+              />
+              <Stack.Screen
+                name="OrderTracking"
+                component={OrderTrackingScreen}
+                options={{ contentStyle: { backgroundColor: '#FFF' } }}
               />
             </>
           ) : (

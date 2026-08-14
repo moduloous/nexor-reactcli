@@ -163,7 +163,7 @@ export default function MedicinesScreen({ navigation }: any) {
               style={styles.quickActionImage}
               resizeMode="contain"
             />
-            <Text style={styles.quickActionLabel}>Order via{'\n'}Prescription</Text>
+            <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Order via Prescription</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickActionBox}>
             <Image 
@@ -171,7 +171,7 @@ export default function MedicinesScreen({ navigation }: any) {
               style={styles.quickActionImage}
               resizeMode="contain"
             />
-            <Text style={styles.quickActionLabel}>Reorder</Text>
+            <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Reorder</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.quickActionBox}
@@ -182,7 +182,7 @@ export default function MedicinesScreen({ navigation }: any) {
               style={styles.quickActionImage}
               resizeMode="contain"
             />
-            <Text style={styles.quickActionLabel}>Book Lab{'\n'}Test</Text>
+            <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Book Lab Test</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.quickActionBox}
@@ -193,7 +193,7 @@ export default function MedicinesScreen({ navigation }: any) {
               style={styles.quickActionImage}
               resizeMode="contain"
             />
-            <Text style={styles.quickActionLabel}>Consult{'\n'}Doctor</Text>
+            <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Consult Doctor</Text>
           </TouchableOpacity>
         </View>
 
@@ -410,7 +410,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1A24',
     textAlign: 'center',
-    lineHeight: 15,
   },
   searchInput: {
     flex: 1,
