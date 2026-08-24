@@ -49,6 +49,9 @@ export interface AppState {
 
   // User
   user: UserProfile | null;
+  userLocation: { lat: number; lng: number } | null;
+  isServiceable: boolean | null;
+  nearestStoreId: string | null;
 
   // Cart
   cart: CartItem[];
@@ -64,6 +67,8 @@ export interface AppState {
   setAuth: (accessToken: string, refreshToken: string, user: UserProfile | any) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
+  setUserLocation: (lat: number, lng: number) => void;
+  setServiceability: (isServiceable: boolean | null, nearestStoreId: string | null) => void;
 
   // Cart Actions
   addToCart: (item: Omit<CartItem, 'quantity'>) => void;
@@ -93,6 +98,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
   user: null,
+  userLocation: null,
+  isServiceable: null,
+  nearestStoreId: null,
   cart: [],
   cartTotal: 0,
   orders: [],
@@ -115,6 +123,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setLoading: (loading) =>
     set({ isLoading: loading }),
+
+  setUserLocation: (lat, lng) => 
+    set({ userLocation: { lat, lng } }),
+
+  setServiceability: (isServiceable, nearestStoreId) =>
+    set({ isServiceable, nearestStoreId }),
 
   // Cart Actions
   addToCart: (item) => {

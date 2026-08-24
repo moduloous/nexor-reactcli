@@ -185,35 +185,49 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
         searchCategory = searchCategory.slice(0, -1);
       }
       
-      let query = supabase
-        .from('medicine_products')
-        .select('*')
-        .limit(300);
+      try {
+        const nearestStoreId = useAppStore.getState().nearestStoreId;
+        if (!nearestStoreId) {
+          setMedicines([]);
+          setLoading(false);
+          return;
+        }
 
-      if (isSearch) {
-        if (searchQuery) {
-          query = query.ilike('name', `%${searchQuery}%`);
-        }
-      } else if (isSupplements || isConditions) {
-        query = query.or((activeCategoryData as any).keywords);
-        if (searchQuery) {
-          query = query.ilike('name', `%${searchQuery}%`);
-        }
-      } else {
-        query = query.ilike('dosage_form', `%${searchCategory}%`);
-        if (searchQuery) {
-          query = query.ilike('name', `%${searchQuery}%`);
-        }
-      }
-
-      const { data, error } = await query;
+        const res = await fetch(`https://nexor-backend.onrender.com/api/medicine/pharmacies/${nearestStoreId}`);
+        const result = await res.json();
         
-      if (error) {
-        console.error('Error fetching medicines:', error);
-      } else if (data) {
-        // Quick shuffle to mix companies up
-        const mixedData = [...data].sort(() => 0.5 - Math.random());
+        let fetchedMedicines = result.medicines || [];
+
+        if (isSearch) {
+          if (searchQuery) {
+            fetchedMedicines = fetchedMedicines.filter((m: any) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          }
+        } else if (isSupplements || isConditions) {
+          const keywordsStr = (activeCategoryData as any).keywords || '';
+          const kws = keywordsStr.split(',').map((k: string) => k.replace('name.ilike.%', '').replace('%', '').toLowerCase());
+          
+          fetchedMedicines = fetchedMedicines.filter((m: any) => {
+            const lowerName = m.name.toLowerCase();
+            return kws.some((kw: string) => lowerName.includes(kw));
+          });
+          
+          if (searchQuery) {
+            fetchedMedicines = fetchedMedicines.filter((m: any) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          }
+        } else {
+          fetchedMedicines = fetchedMedicines.filter((m: any) => {
+            return m.dosage_form && m.dosage_form.toLowerCase().includes(searchCategory.toLowerCase());
+          });
+          if (searchQuery) {
+            fetchedMedicines = fetchedMedicines.filter((m: any) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          }
+        }
+
+        const mixedData = [...fetchedMedicines].sort(() => 0.5 - Math.random());
         setMedicines(mixedData.slice(0, 100));
+
+      } catch (error) {
+        console.error('Error fetching real medicines:', error);
       }
       
       const elapsed = Date.now() - startTime;

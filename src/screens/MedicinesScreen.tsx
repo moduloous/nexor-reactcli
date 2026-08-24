@@ -17,6 +17,7 @@ import { TextInput } from '../components/TextInput';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
+import { useAppStore } from '../store/useAppStore';
 
 const { width } = Dimensions.get('window');
 
@@ -53,19 +54,21 @@ export default function MedicinesScreen({ navigation }: any) {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const insets = useSafeAreaInsets();
+  const isServiceable = useAppStore((state) => state.isServiceable);
 
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
       const fetchSuggestions = async () => {
         setIsSearching(true);
-        const { data } = await supabase
-          .from('medicine_products')
-          .select('id, name, dosage_form')
-          .ilike('name', `%${searchQuery.trim()}%`)
-          .limit(5);
-        
-        if (data) {
-          setSuggestions(data);
+        try {
+          const nearestStoreId = useAppStore.getState().nearestStoreId;
+          const res = await fetch(`https://nexor-backend.onrender.com/api/medicine/search?q=${encodeURIComponent(searchQuery.trim())}&storeId=${nearestStoreId || ''}`);
+          const data = await res.json();
+          if (data && data.medicines) {
+            setSuggestions(data.medicines.slice(0, 5));
+          }
+        } catch (e) {
+          console.error(e);
         }
         setIsSearching(false);
       };
@@ -106,8 +109,16 @@ export default function MedicinesScreen({ navigation }: any) {
           <Text style={styles.headerLight}>Online pharmacy</Text>
         </View>
 
+        {isServiceable === false && (
+          <View style={styles.unserviceableBanner}>
+            <Feather name="map-pin" size={24} color="#E74C3C" style={{ marginBottom: 8 }} />
+            <Text style={styles.unserviceableBannerTitle}>We will soon be in your area!</Text>
+            <Text style={styles.unserviceableBannerText}>Currently, our pharmacy delivery is not available at your location.</Text>
+          </View>
+        )}
+
         {/* Search + Scan (scan inside the bar) */}
-        <View style={{ zIndex: 10 }}>
+        <View style={{ zIndex: 10 }} pointerEvents={isServiceable === false ? 'none' : 'auto'}>
           <View style={styles.searchBar}>
             <TextInput
               style={styles.searchInput}
@@ -153,7 +164,7 @@ export default function MedicinesScreen({ navigation }: any) {
         </View>
 
         {/* Quick Action Boxes */}
-        <View style={styles.quickActionsRow}>
+        <View style={styles.quickActionsRow} pointerEvents={isServiceable === false ? 'none' : 'auto'}>
           <TouchableOpacity 
             style={styles.quickActionBox}
             onPress={() => navigation.navigate('PrescriptionOrder')}
@@ -202,6 +213,7 @@ export default function MedicinesScreen({ navigation }: any) {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsRow}
+          pointerEvents={isServiceable === false ? 'none' : 'auto'}
         >
           {CATEGORIES.map((cat) => {
             const active = activeTab === cat;
@@ -230,7 +242,7 @@ export default function MedicinesScreen({ navigation }: any) {
         </ScrollView>
 
         {/* Dynamic Bento Grid */}
-        <View style={styles.bentoContainer}>
+        <View style={styles.bentoContainer} pointerEvents={isServiceable === false ? 'none' : 'auto'}>
           {BENTO_ROWS.map((row, rowIndex) => (
             <View key={`row-${rowIndex}`} style={styles.bentoRow}>
               {row.map((item) => (
@@ -275,6 +287,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  unserviceableBanner: {
+    backgroundColor: '#FDEDEC',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FADBD8',
+  },
+  unserviceableBannerTitle: {
+    color: '#E74C3C',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  unserviceableBannerText: {
+    color: '#E74C3C',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    opacity: 0.9,
   },
   scroll: {
     paddingHorizontal: 22,

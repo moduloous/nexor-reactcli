@@ -82,7 +82,7 @@ export default function CartScreen({ navigation }: any) {
         });
         for (const item of cart) {
           await axios.post('https://nexor-backend.onrender.com/api/medicines/cart/items', {
-            medicineId: "7a94fb55-a1cc-4a2e-a2df-2b530fa655bf",
+            medicineId: item.id,
             quantity: item.quantity
           }, {
             headers: { Authorization: `Bearer ${accessToken}` }
@@ -92,32 +92,34 @@ export default function CartScreen({ navigation }: any) {
         console.warn('Cart sync warning:', syncErr);
       }
 
+      const userLocation = useAppStore.getState().userLocation;
+
+      if (!userLocation) {
+        useAppStore.getState().showAlert('Location Required', 'We could not detect your location. Please restart the app and ensure GPS is enabled.');
+        setLoading(false);
+        return;
+      }
+
       // 1. Create a dummy order on the backend to get a valid DB Order ID
       const orderRes = await axios.post('https://nexor-backend.onrender.com/api/medicines/orders', {
-        deliveryLat: 12.9116,
-        deliveryLng: 77.6412,
+        deliveryLat: userLocation.lat,
+        deliveryLng: userLocation.lng,
         deliveryAddress: fullDeliveryAddress
       }, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       
-      // 1.5 Send order to the Pharmacy Dashboard so they can fulfill it!
-      const DASHBOARD_URL = 'https://pharmacy-orders.netlify.app';
-      try {
-        await axios.post(`${DASHBOARD_URL}/api/orders`, {
-          store_id: "d4d70946-1ac4-4bb4-9f09-1b98f59e880b",
-          user_email: user?.email || "user@example.com",
-          total_amount: cartTotal,
-          items: cart,
-          delivery_address: fullDeliveryAddress
-        });
-      } catch (dashErr) {
-        console.warn('Dashboard sync warning:', dashErr);
+      const dbOrderId = orderRes.data?.data?.id || orderRes.data?.id || `ORDER_${Date.now()}`;
+      
+      // 2. Create Razorpay Payment Order
+      const paymentRes = await axios.post(`https://nexor-backend.onrender.com/api/medicines/payments/${dbOrderId}/create`, {}, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const rzpOrderId = paymentRes.data?.data?.razorpayOrderId || paymentRes.data?.razorpayOrderId;
+      
+      if (!rzpOrderId) {
+        throw new Error('Failed to create Razorpay Order ID. Please try again.');
       }
-      
-      const dbOrderId = orderRes.data?.id || `ORDER_${Date.now()}`;
-      
-      const rzpOrderId = ""; 
       
       // 3. Open Razorpay Checkout Sheet
       const options = {
@@ -138,17 +140,30 @@ export default function CartScreen({ navigation }: any) {
       
       setShowCheckoutForm(false);
       
-      RazorpayCheckout.open(options).then((data: any) => {
-        useAppStore.getState().showAlert('Order Placed!', `Payment successful. ID: ${data.razorpay_payment_id}`);
-        addOrder({
-          id: dbOrderId,
-          items: [...cart],
-          total: cartTotal,
-          date: new Date().toISOString(),
-          status: 'Processing',
-        });
-        clearCart();
-        navigation.navigate('Main');
+      RazorpayCheckout.open(options).then(async (data: any) => {
+        // Verify payment on the backend
+        try {
+          await axios.post('https://nexor-backend.onrender.com/api/medicines/payments/verify', {
+            razorpay_order_id: data.razorpay_order_id,
+            razorpay_payment_id: data.razorpay_payment_id,
+            razorpay_signature: data.razorpay_signature
+          }, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+          
+          useAppStore.getState().showAlert('Order Placed!', `Payment successful. ID: ${data.razorpay_payment_id}`);
+          addOrder({
+            id: dbOrderId,
+            items: [...cart],
+            total: cartTotal,
+            date: new Date().toISOString(),
+            status: 'Processing',
+          });
+          clearCart();
+          navigation.navigate('Main');
+        } catch (verifyErr: any) {
+          useAppStore.getState().showAlert('Payment Verification Failed', verifyErr.message || 'Verification error');
+        }
       }).catch((error: any) => {
         setShowCheckoutForm(true); // Re-open if payment fails
         useAppStore.getState().showAlert('Payment Failed', `Error: ${error.code} | ${error.description}`);
