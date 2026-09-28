@@ -6,6 +6,8 @@
 import api from './client';
 import { Linking } from 'react-native';
 import { useAppStore } from '../store/useAppStore';
+import { sha256 } from 'js-sha256';
+import base64 from 'base-64';
 
 // ─── PKCE Helpers ──────────────────────────────────────────────────────────────
 
@@ -18,24 +20,36 @@ function generateRandomString(length: number): string {
   return result;
 }
 
+function generateCodeChallenge(verifier: string): string {
+  const hashArray = sha256.array(verifier);
+  const hashString = String.fromCharCode.apply(null, hashArray);
+  return base64
+    .encode(hashString)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 /** Start the Swiggy OAuth flow — generates PKCE pair and opens the browser */
 export async function startSwiggyOAuth() {
   const codeVerifier = generateRandomString(64);
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+  
   // Store verifier so SwiggyCallbackScreen can retrieve it after the redirect
   useAppStore.getState().setSwiggyCodeVerifier(codeVerifier);
 
   const redirectUri = 'https://nexor.app/swiggy/callback';
 
-  // Swiggy MCP uses OAuth 2.1 with Dynamic Client Registration.
-  // No static client_id needed — the client registers itself automatically.
   const params = new URLSearchParams({
+    client_id: 'nexor',
     redirect_uri: redirectUri,
     response_type: 'code',
-    code_verifier: codeVerifier,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
     scope: 'food instamart',
   });
 
-  const authUrl = `https://mcp.swiggy.com/oauth/authorize?${params.toString()}`;
+  const authUrl = `https://mcp.swiggy.com/auth/authorize?${params.toString()}`;
   await Linking.openURL(authUrl);
 }
 
