@@ -38,7 +38,7 @@ export async function startSwiggyOAuth() {
   // Store verifier so SwiggyCallbackScreen can retrieve it after the redirect
   useAppStore.getState().setSwiggyCodeVerifier(codeVerifier);
 
-  const redirectUri = 'https://nexor.app/swiggy/callback';
+  const redirectUri = 'https://nexor-backend.onrender.com/api/swiggy/callback';
 
   const params = new URLSearchParams({
     client_id: 'nexor',
