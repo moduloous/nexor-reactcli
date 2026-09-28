@@ -19,11 +19,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token expiry
+// Handle token expiry — but NOT for Swiggy routes (401 there = Swiggy not connected, not Nexor logout)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const url: string = error.config?.url ?? '';
+    const isSwiggyRoute = url.includes('/swiggy/');
+    if (error.response?.status === 401 && !isSwiggyRoute) {
       useAppStore.getState().logout();
     }
     return Promise.reject(error);

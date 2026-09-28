@@ -20,12 +20,12 @@ import {
   Animated,
   ActivityIndicator,
   Dimensions,
-  Image,
   StatusBar,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
-import { checkSwiggyConnection, startSwiggyOAuth } from '../api/swiggy.api';
+import { startSwiggyOAuth } from '../api/swiggy.api';
+import { useAppStore } from '../store/useAppStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -53,7 +53,7 @@ export default function SwiggyConnectScreen({ route, navigation }: any) {
   const mode: Mode = route.params?.mode ?? 'food';
   const insets = useSafeAreaInsets();
 
-  const [checking, setChecking] = useState(true);
+  const isSwiggyConnected = useAppStore((s) => s.isSwiggyConnected);
   const [connecting, setConnecting] = useState(false);
 
   // Animations
@@ -63,6 +63,12 @@ export default function SwiggyConnectScreen({ route, navigation }: any) {
   const orbAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // If already connected, skip straight to the section
+    if (isSwiggyConnected) {
+      navigation.replace(mode === 'food' ? 'SwiggyFood' : 'SwiggyGrocery');
+      return;
+    }
+
     // Start orb animation
     Animated.loop(
       Animated.sequence([
@@ -71,29 +77,20 @@ export default function SwiggyConnectScreen({ route, navigation }: any) {
       ])
     ).start();
 
-    // Check if already connected
-    checkSwiggyConnection().then((connected) => {
-      setChecking(false);
-      if (connected) {
-        // Already linked — go straight to the screen
-        navigation.replace(mode === 'food' ? 'SwiggyFood' : 'SwiggyGrocery');
-      } else {
-        // Show connect UI
-        Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
-        ]).start();
+    // Fade in the connect UI
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
+    ]).start();
 
-        // Pulse the button
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulseAnim, { toValue: 1.04, duration: 900, useNativeDriver: true }),
-            Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
-          ])
-        ).start();
-      }
-    });
-  }, []);
+    // Pulse the button
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.04, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [isSwiggyConnected]);
 
   async function handleConnect() {
     setConnecting(true);
@@ -107,15 +104,6 @@ export default function SwiggyConnectScreen({ route, navigation }: any) {
   }
 
   const orbTranslateY = orbAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -18] });
-
-  if (checking) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="light-content" backgroundColor={SWIGGY_DARK} />
-        <ActivityIndicator size="large" color={SWIGGY_ORANGE} />
-      </View>
-    );
-  }
 
   const content = CONTENT[mode];
 

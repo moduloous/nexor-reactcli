@@ -67,6 +67,8 @@ export interface AppState {
 
   // Swiggy OAuth — PKCE code verifier (stored before OAuth redirect, cleared after use)
   swiggyCodeVerifier: string | null;
+  /** True once the user has successfully linked their Swiggy account */
+  isSwiggyConnected: boolean;
 
   // Auth Actions
   setAuth: (accessToken: string, refreshToken: string, user: UserProfile | any) => void;
@@ -91,6 +93,7 @@ export interface AppState {
   // Swiggy OAuth Actions
   setSwiggyCodeVerifier: (verifier: string) => void;
   clearSwiggyCodeVerifier: () => void;
+  setSwiggyConnected: (connected: boolean) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -116,6 +119,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   orders: [],
   alertData: { visible: false, title: '', message: '' },
   swiggyCodeVerifier: null,
+  isSwiggyConnected: false,
 
   // Auth Actions
   setAuth: (accessToken, refreshToken, user) =>
@@ -132,6 +136,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       cartTotal: 0,
       orders: [],
       swiggyCodeVerifier: null,
+      isSwiggyConnected: false,
     }),
 
   setLoading: (loading) =>
@@ -188,4 +193,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Swiggy OAuth Actions
   setSwiggyCodeVerifier: (verifier) => set({ swiggyCodeVerifier: verifier }),
   clearSwiggyCodeVerifier: () => set({ swiggyCodeVerifier: null }),
+  setSwiggyConnected: (connected) => set({ isSwiggyConnected: connected }),
 }));

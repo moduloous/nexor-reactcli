@@ -105,6 +105,8 @@ export default function SwiggyCallbackScreen() {
 
       // Clear the stored verifier — it's single-use
       useAppStore.getState().clearSwiggyCodeVerifier?.();
+      // Mark Swiggy as connected so the connect screen skips login next time
+      useAppStore.getState().setSwiggyConnected(true);
 
       setStatus('success');
 
