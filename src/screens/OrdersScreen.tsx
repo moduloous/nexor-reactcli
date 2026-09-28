@@ -24,14 +24,15 @@ export default function OrdersScreen() {
     const fetchOrders = async () => {
       const startTime = Date.now();
       try {
-        const { data, error } = await supabase
-          .from('medicine_orders')
-          .select('*')
-          .eq('user_email', emailToUse)
-          .order('created_at', { ascending: false });
-          
-        if (data && !error) {
-          setLiveOrders(data);
+        const token = useAppStore.getState().accessToken;
+        // Import Config if not already available, or just hardcode the fallback
+        const baseUrl = 'https://nexor-backend.onrender.com/api'; 
+        const res = await fetch(`${baseUrl}/medicines/orders`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLiveOrders(data.data || data);
         }
       } catch (err) {
         console.warn('Error fetching live orders:', err);
@@ -46,34 +47,10 @@ export default function OrdersScreen() {
 
     fetchOrders();
 
-    // Subscribe to realtime updates for this user's orders
-    const channel = supabase
-      .channel('public:medicine_orders')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'medicine_orders',
-          filter: `user_email=eq.${emailToUse}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setLiveOrders((prev) => [payload.new, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setLiveOrders((prev) =>
-              prev.map((order) => (order.id === payload.new.id ? payload.new : order))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setLiveOrders((prev) => prev.filter((order) => order.id !== payload.old.id));
-          }
-        }
-      )
-      .subscribe();
+    // Poll every 5 seconds since Supabase realtime is not aligned with MedOrder schema
+    const intervalId = setInterval(fetchOrders, 5000);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(intervalId);
   }, [user?.email]);
 
   const getStatusColor = (status: string) => {
@@ -95,7 +72,9 @@ export default function OrdersScreen() {
   };
 
   const renderOrder = ({ item, index }: any) => {
-    const formattedDate = new Date(item.created_at || item.date).toLocaleDateString('en-US', {
+    const rawDate = item.createdAt || item.created_at || item.date;
+    const dateObj = rawDate ? new Date(rawDate) : new Date();
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     
@@ -104,56 +83,66 @@ export default function OrdersScreen() {
     const statusInfo = getStatusColor(item.status);
     
     return (
-      <Animated.View entering={FadeInDown.delay(index * 100).duration(500)} style={styles.orderCard}>
-        <View style={styles.orderHeader}>
-          <View style={styles.idContainer}>
-            <Text style={styles.orderId}>Order #{item.id.substring(0, 8).toUpperCase()}</Text>
-            {item.created_at && (
-              <View style={styles.liveIndicator}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>Live</Text>
-              </View>
-            )}
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-            <Feather name={statusInfo.icon} size={12} color={statusInfo.text} style={{ marginRight: 4 }} />
-            <Text style={[styles.statusText, { color: statusInfo.text }]}>{item.status || 'PENDING'}</Text>
-          </View>
-        </View>
-        <Text style={styles.orderDate}>{formattedDate}</Text>
-        
-        <View style={styles.itemsList}>
-          {items.map((cartItem: any, idx: number) => (
-            <View key={idx} style={styles.itemRow}>
-              <Text style={styles.itemQuantity}>{cartItem.quantity}x</Text>
-              <Text style={styles.itemText} numberOfLines={1}>{cartItem.name}</Text>
-              <Text style={styles.itemPrice}>₹{(cartItem.price * cartItem.quantity).toFixed(2)}</Text>
+      <Animated.View entering={FadeInDown.delay(index * 100).duration(500)}>
+        <TouchableOpacity 
+          style={styles.orderCard}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('OrderDetails', { order: item })}
+        >
+          <View style={styles.orderHeader}>
+            <View style={styles.idContainer}>
+              <Text style={styles.orderId}>Order #{item.id.substring(0, 8).toUpperCase()}</Text>
+              {(item.createdAt || item.created_at) && (
+                <View style={styles.liveIndicator}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>Live</Text>
+                </View>
+              )}
             </View>
-          ))}
-        </View>
-        
-        <View style={styles.orderFooter}>
-          <View>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.orderTotal}>₹{total.toFixed(2)}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+              <Feather name={statusInfo.icon} size={12} color={statusInfo.text} style={{ marginRight: 4 }} />
+              <Text style={[styles.statusText, { color: statusInfo.text }]}>{item.status || 'PENDING'}</Text>
+            </View>
+          </View>
+          <Text style={styles.orderDate}>{formattedDate}</Text>
+          
+          <View style={styles.itemsList}>
+            {items.map((cartItem: any, idx: number) => {
+              const name = cartItem.name || cartItem.medicine?.name || 'Unknown Item';
+              const price = cartItem.price || cartItem.unitPrice || 0;
+              return (
+                <View key={idx} style={styles.itemRow}>
+                  <Text style={styles.itemQuantity}>{cartItem.quantity}x</Text>
+                  <Text style={styles.itemText} numberOfLines={1}>{name}</Text>
+                  <Text style={styles.itemPrice}>₹{(price * cartItem.quantity).toFixed(2)}</Text>
+                </View>
+              );
+            })}
           </View>
           
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {['ACCEPTED', 'RIDER_AT_PICKUP', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(item.status) && (
-              <TouchableOpacity
-                style={[styles.reorderBtn, { backgroundColor: '#34C759' }]}
-                onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}
-              >
-                <Feather name="map-pin" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.reorderText}>Track</Text>
+          <View style={styles.orderFooter}>
+            <View>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.orderTotal}>₹{total.toFixed(2)}</Text>
+            </View>
+            
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {['ACCEPTED', 'RIDER_AT_PICKUP', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(item.status) && (
+                <TouchableOpacity
+                  style={[styles.reorderBtn, { backgroundColor: '#34C759' }]}
+                  onPress={() => navigation.navigate('OrderTracking', { orderId: item.id })}
+                >
+                  <Feather name="map-pin" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.reorderText}>Track</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.reorderBtn}>
+                <Feather name="refresh-cw" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.reorderText}>Reorder</Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.reorderBtn}>
-              <Feather name="refresh-cw" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.reorderText}>Reorder</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Animated.View>
     );
   };

@@ -10,6 +10,7 @@ import {
   Image,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import { CustomLoader } from '../components/CustomLoader';
 import { Text } from '../components/Text';
@@ -19,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
+import Config from 'react-native-config';
 
 const RECOMMENDED_KEYWORDS = [
   'dolo', 'sinarest', 'polycrol', 'limcee', 'emolene'
@@ -91,16 +93,16 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
   const isSupplements = route?.params?.filter === 'Supplements';
   const isConditions = route?.params?.filter === 'Condition';
   const isSearch = route?.params?.filter === 'Search';
-  
+
   const categories = isSearch ? SEARCH_CATEGORIES : isSupplements ? SUPPLEMENT_CATEGORIES : isConditions ? CONDITION_CATEGORIES : MEDICINE_CATEGORIES;
-  
+
   const [activeCategory, setActiveCategory] = useState(route?.params?.categoryId || categories[0].id);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [localQuery, setLocalQuery] = useState(route?.params?.searchQuery || '');
   const [searchQuery, setSearchQuery] = useState(route?.params?.searchQuery || '');
   const insets = useSafeAreaInsets();
-  
+
   const cart = useAppStore((state) => state.cart);
   const addToCart = useAppStore((state) => state.addToCart);
   const updateQuantity = useAppStore((state) => state.updateQuantity);
@@ -175,28 +177,41 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
   useEffect(() => {
     async function fetchMedicines() {
       if (!activeCategoryData) return;
-      
+
       setLoading(true);
       const startTime = Date.now();
       const categoryName = activeCategoryData.name.replace('\n', ' ');
-      
+
       let searchCategory = categoryName;
       if (searchCategory.endsWith('s')) {
         searchCategory = searchCategory.slice(0, -1);
       }
-      
+
       try {
-        const nearestStoreId = useAppStore.getState().nearestStoreId;
+        let nearestStoreId = useAppStore.getState().nearestStoreId;
+        if (!nearestStoreId || nearestStoreId === 'dummy-store-id') {
+          nearestStoreId = 'e93e1ac8-7400-4c6e-b64f-c15f65c9c975';
+        }
+
         if (!nearestStoreId) {
           setMedicines([]);
           setLoading(false);
           return;
         }
 
-        const res = await fetch(`https://nexor-backend.onrender.com/api/medicine/pharmacies/${nearestStoreId}`);
+        const baseUrl = Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api';
+        const res = await fetch(`${baseUrl}/medicine/pharmacies/${nearestStoreId}`);
         const result = await res.json();
-        
-        let fetchedMedicines = result.medicines || [];
+
+        if (!res.ok) {
+          if (__DEV__) {
+            Alert.alert('Backend Error', `Status: ${res.status}. Response: ${JSON.stringify(result)}`);
+          }
+          console.error('Backend returned error:', result);
+        }
+
+        // The backend wraps the response in { success: true, data: {...} }
+        let fetchedMedicines = result.data?.medicines || result.medicines || [];
 
         if (isSearch) {
           if (searchQuery) {
@@ -205,18 +220,21 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
         } else if (isSupplements || isConditions) {
           const keywordsStr = (activeCategoryData as any).keywords || '';
           const kws = keywordsStr.split(',').map((k: string) => k.replace('name.ilike.%', '').replace('%', '').toLowerCase());
-          
+
           fetchedMedicines = fetchedMedicines.filter((m: any) => {
             const lowerName = m.name.toLowerCase();
             return kws.some((kw: string) => lowerName.includes(kw));
           });
-          
+
           if (searchQuery) {
             fetchedMedicines = fetchedMedicines.filter((m: any) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
           }
         } else {
           fetchedMedicines = fetchedMedicines.filter((m: any) => {
-            return m.dosage_form && m.dosage_form.toLowerCase().includes(searchCategory.toLowerCase());
+            const matchesDosage = m.dosage_form && m.dosage_form.toLowerCase().includes(searchCategory.toLowerCase());
+            const matchesCategory = m.category && m.category.toLowerCase().includes(searchCategory.toLowerCase());
+            const matchesName = m.name && m.name.toLowerCase().includes(searchCategory.toLowerCase());
+            return matchesDosage || matchesCategory || matchesName;
           });
           if (searchQuery) {
             fetchedMedicines = fetchedMedicines.filter((m: any) => m.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -224,26 +242,41 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
         }
 
         const mixedData = [...fetchedMedicines].sort(() => 0.5 - Math.random());
-        setMedicines(mixedData.slice(0, 100));
+        const finalMedicines = mixedData.slice(0, 100);
 
-      } catch (error) {
+        let recommendedCount = 0;
+        finalMedicines.forEach((item: any) => {
+          if (isRecommended(item.name) && recommendedCount < 2) {
+            item.isRecommendedFlag = true;
+            recommendedCount++;
+          } else {
+            item.isRecommendedFlag = false;
+          }
+        });
+
+        setMedicines(finalMedicines);
+
+      } catch (error: any) {
         console.error('Error fetching real medicines:', error);
+        if (__DEV__) {
+          Alert.alert('Fetch Error', `Failed to load medicines from backend. Is the server running/awake? Error: ${error.message}`);
+        }
       }
-      
+
       const elapsed = Date.now() - startTime;
       if (elapsed < 500) {
         await new Promise(resolve => setTimeout(() => resolve(undefined), 500 - elapsed));
       }
       setLoading(false);
     }
-    
+
     fetchMedicines();
   }, [activeCategoryData, searchQuery]);
 
   return (
     <View style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
+
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -266,8 +299,8 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
         {/* Left Sidebar */}
         {!isConditions && !isSearch && (
           <View style={styles.sidebar}>
-            <ScrollView 
-              showsVerticalScrollIndicator={false} 
+            <ScrollView
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.sidebarScroll}
             >
               {categories.map((cat) => {
@@ -281,7 +314,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                     <View style={[styles.iconCircle, isActive && styles.iconCircleActive]}>
                       <Text style={styles.iconText}>{cat.icon}</Text>
                     </View>
-                    <Text 
+                    <Text
                       style={[styles.sidebarItemText, isActive && styles.sidebarItemTextActive]}
                       numberOfLines={2}
                     >
@@ -333,7 +366,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                 <View style={[styles.productCard, (isConditions || isSearch) && { width: (width - 24 - 12) / 2 }]}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.badgesContainer}>
-                      {isRecommended(item.name) && (
+                      {item.isRecommendedFlag && (
                         <View style={styles.recommendedBadge}>
                           <Feather name="star" size={8} color="#FFFFFF" />
                           <Text style={styles.recommendedText}>Recommended</Text>
@@ -355,7 +388,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                       </Text>
                     ) : null}
                   </View>
-                  
+
                   <View style={styles.bottomRow}>
                     <View style={styles.priceContainer}>
                       {item.price > 0 && (
@@ -370,7 +403,7 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
                     {(() => {
                       const cartItem = cart.find(i => i.id === item.id);
                       const qty = cartItem ? cartItem.quantity : 0;
-                      
+
                       if (qty > 0) {
                         return (
                           <View style={styles.quantityContainer}>
@@ -392,22 +425,21 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
 
                       return (
                         <TouchableOpacity
-                          style={styles.cartButton}
+                          style={{ zIndex: 10, alignSelf: 'flex-start' }}
                           onPress={(evt) => handleAddToCart(item, evt)}
                         >
-                          <Image 
-                            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/add.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvYWRkLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODUzMDg5OTYsImV4cCI6MTg3OTkxNjk5Nn0.VSui_Xn0DtUi7oeYuN7mq3VBG10DkHTIy4V-eWPcU40' }}
-                            style={{ width: 12, height: 12, marginRight: 4 }}
+                          <Image
+                            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/icons8-plus-30.png?token=eyJraWQiOiI3NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvaWNvbnM4LXBsdXMtMzAucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc5MDM0ODE1OCwiZXhwIjoxODIxODg0MTU4fQ.rTsNxT1w3qCgHNodVE6xE_TD-R5u1ptJG9Mh3KDp83o' }}
+                            style={{ width: 28, height: 28 }}
                             resizeMode="contain"
                           />
-                          <Text style={styles.cartButtonText}>Add</Text>
                         </TouchableOpacity>
                       );
                     })()}
                   </View>
                 </View>
               )}
-              ListFooterComponent={<View style={{height: 100}}/>}
+              ListFooterComponent={<View style={{ height: 100 }} />}
             />
           )}
         </View>
@@ -419,13 +451,13 @@ export default function AllMedicinesScreen({ route, navigation }: any) {
           inputRange: [0, 1],
           outputRange: [dot.startX, cartIconPos.x]
         });
-        
+
         // Add a slight arc/curve to the drop
         const translateY = dot.anim.interpolate({
           inputRange: [0, 0.5, 1],
           outputRange: [dot.startY, dot.startY - 30, cartIconPos.y]
         });
-        
+
         const scale = dot.anim.interpolate({
           inputRange: [0, 0.2, 0.8, 1],
           outputRange: [0, 1.2, 1, 0.2]

@@ -13,6 +13,7 @@ import Geolocation from '@react-native-community/geolocation';
 import RootNavigator from './src/navigation/RootNavigator';
 import SplashScreen from './src/components/SplashScreen';
 import { useAppStore } from './src/store/useAppStore';
+import Config from 'react-native-config';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -46,26 +47,34 @@ export default function App() {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 useAppStore.getState().setUserLocation(lat, lng);
-                
+
                 try {
-                  const res = await fetch(`https://nexor-backend.onrender.com/api/medicines/serviceability/pharmacies?lat=${lat}&lng=${lng}`);
+                  const baseUrl = Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api';
+                  const res = await fetch(`${baseUrl}/medicines/serviceability/pharmacies?lat=${lat}&lng=${lng}`);
                   const data = await res.json();
-                  if (res.ok && data.pharmacies && data.pharmacies.length > 0) {
-                    useAppStore.getState().setServiceability(true, data.pharmacies[0].id);
+                  const responseData = data.data || data;
+                  if (res.ok && responseData.pharmacies && responseData.pharmacies.length > 0) {
+                    useAppStore.getState().setServiceability(true, responseData.pharmacies[0].pharmacyId || responseData.pharmacies[0].id);
                   } else {
+                    // Temporarily set to true in DEV if it fails so you can keep building UI, 
+                    // or show an alert to debug
+                    console.log('Location check failed or no pharmacies:', responseData);
+                    Alert.alert('Location Check Failed', `No pharmacies found near ${lat}, ${lng}. Response: ${JSON.stringify(responseData)}`);
+                    // Real serviceability check completed
                     useAppStore.getState().setServiceability(false, null);
                   }
-                } catch (e) {
+                } catch (e: any) {
+                  Alert.alert('Network Error', `Could not reach backend: ${e.message}`);
                   useAppStore.getState().setServiceability(false, null);
                 }
-                
+
                 resolve();
               },
               (error) => {
                 Alert.alert('GPS Required', 'Please enable GPS on your device and restart the app.');
                 reject(error);
               },
-              { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+              { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
             );
           });
         }

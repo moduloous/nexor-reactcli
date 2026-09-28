@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,7 +10,30 @@ import {
 } from 'react-native';
 import { Text } from '../components/Text';
 import { TextInput } from '../components/TextInput';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
+
+const SkeletonBlock = ({ width, height, borderRadius, style }: any) => {
+  const opacity = useSharedValue(0.5);
+  
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 800 }),
+        withTiming(0.4, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[{ width, height, borderRadius, backgroundColor: '#E2E0E7' }, animatedStyle, style]} />
+  );
+};
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 
@@ -33,7 +56,28 @@ export default function HomeScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
 
-  console.log('[HomeScreen] Rendering...');
+  // Skeleton State
+  const [imagesLoaded, setImagesLoaded] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const TOTAL_IMAGES = 13;
+
+  const handleImageLoad = () => {
+    setImagesLoaded(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (imagesLoaded >= TOTAL_IMAGES) {
+      setIsReady(true);
+    }
+  }, [imagesLoaded]);
+
+  // Fallback timeout so we don't block forever
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 12000); // 12 seconds max wait
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -41,14 +85,32 @@ export default function HomeScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 32 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/noxorlogo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvbm94b3Jsb2dvLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ2MjgsImV4cCI6MTgxNjI0MDYyOH0.GpNodQ3zCNnNL5LCKxmnX8VrGalTFhnRER-SwUW_owg' }} style={styles.logoImage} resizeMode="contain" />
+            <Image 
+              source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/noxorlogo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvbm94b3Jsb2dvLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQ2MjgsImV4cCI6MTgxNjI0MDYyOH0.GpNodQ3zCNnNL5LCKxmnX8VrGalTFhnRER-SwUW_owg' }} 
+              style={styles.logoImage} 
+              resizeMode="contain" 
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
+            />
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center' }}>
-              <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/qr%20code.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvcXIgY29kZS5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0NzA0MTc2LCJleHAiOjE4NzkzMTIxNzZ9.RfW01maAbZTSMdv_gohZ0H-KZ1KvfcvrPWZpnrzH4GI' }} style={{ width: 44, height: 44 }} resizeMode="contain" />
+              <Image 
+                source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/qr%20code.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvcXIgY29kZS5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0NzA0MTc2LCJleHAiOjE4NzkzMTIxNzZ9.RfW01maAbZTSMdv_gohZ0H-KZ1KvfcvrPWZpnrzH4GI' }} 
+                style={{ width: 44, height: 44 }} 
+                resizeMode="contain" 
+                onLoad={handleImageLoad}
+                onError={handleImageLoad}
+              />
             </TouchableOpacity>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 12 }}>
-              <Image source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/icons8-night-94.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvaWNvbnM4LW5pZ2h0LTk0LnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQwMDIsImV4cCI6MTgxNjI0MDAwMn0.k3tawyje2ZUFiusOc769gEqiHPeLtb2-ggW8tfR1HKs' }} style={{ width: 44, height: 44 }} resizeMode="contain" />
+              <Image 
+                source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/assets/icons8-night-94.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldHMvaWNvbnM4LW5pZ2h0LTk0LnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ3MDQwMDIsImV4cCI6MTgxNjI0MDAwMn0.k3tawyje2ZUFiusOc769gEqiHPeLtb2-ggW8tfR1HKs' }} 
+                style={{ width: 44, height: 44 }} 
+                resizeMode="contain" 
+                onLoad={handleImageLoad}
+                onError={handleImageLoad}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -66,6 +128,8 @@ export default function HomeScreen({ navigation }: any) {
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/home%20icons/search%20bar.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJob21lIGljb25zL3NlYXJjaCBiYXIucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDg3ODkwNywiZXhwIjoxODc5NDg2OTA3fQ.gbg6t6tRsIsRiX9P4U_9n2bOhLLLLEJbYjcJJOd5fz4' }}
               style={styles.searchRightIcon}
               resizeMode="contain"
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
             />
           </TouchableOpacity>
         </Animated.View>
@@ -79,13 +143,23 @@ export default function HomeScreen({ navigation }: any) {
               onPress={() => {
                 if (cat.id === 'medicine') {
                   navigation.navigate('Medicines');
+                } else if (cat.id === 'grocery' || cat.id === 'quick') {
+                  navigation.navigate('SwiggyConnect', { mode: 'grocery' });
+                } else if (cat.id === 'food') {
+                  navigation.navigate('SwiggyConnect', { mode: 'food' });
                 } else {
                   navigation.navigate('CategoryComingSoon', { category: cat.title });
                 }
               }}
             >
               {cat.imageUrl ? (
-                <Image source={{ uri: cat.imageUrl }} style={styles.categoryImage} resizeMode="contain" />
+                <Image 
+                  source={{ uri: cat.imageUrl }} 
+                  style={styles.categoryImage} 
+                  resizeMode="contain" 
+                  onLoad={handleImageLoad}
+                  onError={handleImageLoad}
+                />
               ) : (
                 <Text style={styles.categoryIcon}>{cat.icon}</Text>
               )}
@@ -100,11 +174,50 @@ export default function HomeScreen({ navigation }: any) {
             source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/banners/medicine%20home%20banner.jpeg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJiYW5uZXJzL21lZGljaW5lIGhvbWUgYmFubmVyLmpwZWciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODc3NTQ0LCJleHAiOjE4MTY0MTM1NDR9.YmJtNezToZLN-vGwbeplwx3f0wz83StpI-_7xav0JFo' }}
             style={styles.dealsBanner}
             resizeMode="cover"
+            onLoad={handleImageLoad}
+            onError={handleImageLoad}
           />
         </Animated.View>
 
         <View style={styles.spacer} />
       </ScrollView>
+
+      {/* Skeleton Overlay */}
+      {!isReady && (
+        <Animated.View exiting={FadeOut.duration(400)} style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF', paddingTop: insets.top, zIndex: 100 }]}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: 32 }]} scrollEnabled={false} showsVerticalScrollIndicator={false}>
+            {/* Header Skeleton */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <SkeletonBlock width={105} height={36} borderRadius={8} />
+              </View>
+              <View style={styles.headerRight}>
+                <SkeletonBlock width={44} height={44} borderRadius={22} />
+                <SkeletonBlock width={44} height={44} borderRadius={22} style={{ marginLeft: 12 }} />
+              </View>
+            </View>
+
+            {/* Search Bar Skeleton */}
+            <SkeletonBlock width="100%" height={54} borderRadius={30} style={{ marginBottom: 32 }} />
+
+            {/* Grid Skeleton */}
+            <View style={styles.grid}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((_, idx) => (
+                <View key={`sk-cat-${idx}`} style={styles.categoryItem}>
+                  <SkeletonBlock width={52} height={52} borderRadius={26} style={{ marginBottom: 8 }} />
+                  <SkeletonBlock width={50} height={10} borderRadius={5} />
+                </View>
+              ))}
+            </View>
+
+            {/* Deals Skeleton */}
+            <View style={styles.dealsSection}>
+              <SkeletonBlock width={150} height={28} borderRadius={8} style={{ marginBottom: 16 }} />
+              <SkeletonBlock width="100%" height={160} borderRadius={20} />
+            </View>
+          </ScrollView>
+        </Animated.View>
+      )}
     </View>
   );
 }

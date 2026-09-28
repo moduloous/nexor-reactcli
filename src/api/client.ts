@@ -1,8 +1,9 @@
 import axios from 'axios';
+import Config from 'react-native-config';
 import { useAppStore } from '../store/useAppStore';
 
 const api = axios.create({
-  baseURL: 'https://nexor-backend.onrender.com/api',
+  baseURL: Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api',
   timeout: 60000, // Increased to 60s because Render free-tier backends take ~50s to wake up
   headers: {
     'Content-Type': 'application/json',

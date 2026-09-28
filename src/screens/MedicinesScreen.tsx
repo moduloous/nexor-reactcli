@@ -18,6 +18,32 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
+import { BlurView } from '@react-native-community/blur';
+import Config from 'react-native-config';
+import Animated, { FadeInUp, FadeOut, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence } from 'react-native-reanimated';
+
+const SkeletonBlock = ({ width, height, borderRadius, style }: any) => {
+  const opacity = useSharedValue(0.5);
+  
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 800 }),
+        withTiming(0.4, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View style={[{ width, height, borderRadius, backgroundColor: '#E2E0E7' }, animatedStyle, style]} />
+  );
+};
 
 const { width } = Dimensions.get('window');
 
@@ -56,15 +82,41 @@ export default function MedicinesScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
   const isServiceable = useAppStore((state) => state.isServiceable);
 
+  // Skeleton State
+  const [imagesLoaded, setImagesLoaded] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const TOTAL_IMAGES = 14;
+
+  const handleImageLoad = () => {
+    setImagesLoaded(prev => prev + 1);
+  };
+
+  useEffect(() => {
+    if (imagesLoaded >= TOTAL_IMAGES) {
+      setIsReady(true);
+    }
+  }, [imagesLoaded]);
+
+  // Fallback timeout so we don't block forever if network is completely dead
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 12000); // 12 seconds max wait
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (searchQuery.trim().length > 1) {
       const fetchSuggestions = async () => {
         setIsSearching(true);
         try {
           const nearestStoreId = useAppStore.getState().nearestStoreId;
-          const res = await fetch(`https://nexor-backend.onrender.com/api/medicine/search?q=${encodeURIComponent(searchQuery.trim())}&storeId=${nearestStoreId || ''}`);
+          const baseUrl = Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api';
+          const res = await fetch(`${baseUrl}/medicine/search?q=${encodeURIComponent(searchQuery.trim())}&storeId=${nearestStoreId || ''}`);
           const data = await res.json();
-          if (data && data.medicines) {
+          if (data && data.data && Array.isArray(data.data)) {
+            setSuggestions(data.data.slice(0, 5));
+          } else if (data && data.medicines && Array.isArray(data.medicines)) {
             setSuggestions(data.medicines.slice(0, 5));
           }
         } catch (e) {
@@ -173,6 +225,8 @@ export default function MedicinesScreen({ navigation }: any) {
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/order%20via.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvb3JkZXIgdmlhLnBuZyIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3ODQ4MjQyOTgsImV4cCI6MTg3OTQzMjI5OH0.PKiSYNKmTVrc9xpCXfTEodZOHSl-H4w4FvS6FiMmdkk' }}
               style={styles.quickActionImage}
               resizeMode="contain"
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
             />
             <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Order via Prescription</Text>
           </TouchableOpacity>
@@ -181,6 +235,8 @@ export default function MedicinesScreen({ navigation }: any) {
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/reorder.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvcmVvcmRlci5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODI0MzQzLCJleHAiOjE4Nzk0MzIzNDN9.meeM8ZJyVZs3x-O2_4ao4Qoi4GMAptylhZKuCGAKU4s' }}
               style={styles.quickActionImage}
               resizeMode="contain"
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
             />
             <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Reorder</Text>
           </TouchableOpacity>
@@ -192,6 +248,8 @@ export default function MedicinesScreen({ navigation }: any) {
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/tests.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvdGVzdHMucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NDgyNDM3MSwiZXhwIjoxODc5NDMyMzcxfQ.7esNE7VwSe8ONFSW-Vz8tkHWFbbzhin5UC3ZD6kgB0k' }}
               style={styles.quickActionImage}
               resizeMode="contain"
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
             />
             <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Book Lab Test</Text>
           </TouchableOpacity>
@@ -203,6 +261,8 @@ export default function MedicinesScreen({ navigation }: any) {
               source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/medicines_icons/mask.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV83NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJtZWRpY2luZXNfaWNvbnMvbWFzay5wbmciLCJzY29wZSI6ImRvd25sb2FkIiwiaWF0IjoxNzg0ODI1MDUxLCJleHAiOjE4Nzk0MzMwNTF9.ww6c1zNskr2lJtRDjY39sFr7horQ86YOtreKKvWLmag' }}
               style={styles.quickActionImage}
               resizeMode="contain"
+              onLoad={handleImageLoad}
+              onError={handleImageLoad}
             />
             <Text style={styles.quickActionLabel} adjustsFontSizeToFit numberOfLines={2}>Consult Doctor</Text>
           </TouchableOpacity>
@@ -269,6 +329,8 @@ export default function MedicinesScreen({ navigation }: any) {
                         }
                       ]}
                       resizeMode="contain"
+                      onLoad={handleImageLoad}
+                      onError={handleImageLoad}
                     />
                   )}
                 </TouchableOpacity>
@@ -279,6 +341,54 @@ export default function MedicinesScreen({ navigation }: any) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Skeleton Overlay */}
+      {!isReady && (
+        <Animated.View exiting={FadeOut.duration(400)} style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF', paddingTop: insets.top, zIndex: 100 }]}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: 16 }]} scrollEnabled={false} showsVerticalScrollIndicator={false}>
+            {/* Header Skeleton */}
+            <View style={styles.topRow}>
+              <SkeletonBlock width={44} height={44} borderRadius={22} />
+              <SkeletonBlock width={120} height={24} borderRadius={8} />
+              <View style={{ width: 44 }} />
+            </View>
+            
+            {/* Typography Skeleton */}
+            <View style={styles.typography}>
+              <SkeletonBlock width={190} height={35} borderRadius={8} style={{ marginBottom: 6 }} />
+              <SkeletonBlock width={240} height={35} borderRadius={8} />
+            </View>
+
+            {/* Search Bar Skeleton */}
+            <SkeletonBlock width="100%" height={54} borderRadius={30} style={{ marginBottom: 24 }} />
+
+            {/* Quick Actions Skeleton */}
+            <View style={styles.quickActionsRow}>
+              {[1, 2, 3, 4].map(i => (
+                <SkeletonBlock key={`sk-qa-${i}`} width={(width - 44 - 30) / 4} height={105} borderRadius={16} />
+              ))}
+            </View>
+
+            {/* Tabs Skeleton */}
+            <View style={[styles.tabsRow, { flexDirection: 'row', marginBottom: 20 }]}>
+              {[1, 2, 3, 4].map(i => (
+                <SkeletonBlock key={`sk-tab-${i}`} width={85} height={24} borderRadius={12} />
+              ))}
+            </View>
+
+            {/* Bento Grid Skeleton */}
+            <View style={styles.bentoContainer}>
+              {BENTO_ROWS.map((row, rowIndex) => (
+                <View key={`sk-bento-row-${rowIndex}`} style={styles.bentoRow}>
+                  {row.map(item => (
+                    <SkeletonBlock key={`sk-bento-${item.id}`} width={0} height={item.height} borderRadius={24} style={{ flex: 1 }} />
+                  ))}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </Animated.View>
+      )}
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TabNavigator from './TabNavigator';
@@ -10,13 +10,30 @@ import AllMedicinesScreen from '../screens/AllMedicinesScreen';
 import CartScreen from '../screens/CartScreen';
 import PrescriptionOrderScreen from '../screens/PrescriptionOrderScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import OrderDetailsScreen from '../screens/OrderDetailsScreen';
+import SwiggyCallbackScreen from '../screens/SwiggyCallbackScreen';
+import SwiggyConnectScreen from '../screens/SwiggyConnectScreen';
+import SwiggyFoodScreen from '../screens/SwiggyFoodScreen';
+import SwiggyGroceryScreen from '../screens/SwiggyGroceryScreen';
+import SwiggyRestaurantScreen from '../screens/SwiggyRestaurantScreen';
 import { useAppStore } from '../store/useAppStore';
 import { supabase } from '../lib/supabase';
 import { CustomAlertModal } from '../components/CustomAlertModal';
-
 import { CustomLoader } from '../components/CustomLoader';
 
 const Stack = createNativeStackNavigator();
+
+/** Deep-link config — maps nexor:// URIs to named screens */
+const linking = {
+  prefixes: ['nexor://'],
+  config: {
+    screens: {
+      // Swiggy OAuth callback: nexor://swiggy/callback?code=xxx
+      SwiggyCallback: 'swiggy/callback',
+      Main: 'main',
+    },
+  },
+};
 
 function LoadingScreen() {
   return (
@@ -69,7 +86,7 @@ export default function RootNavigator() {
 
   return (
     <>
-      <NavigationContainer>
+      <NavigationContainer linking={linking}>
         <Stack.Navigator
           screenOptions={{
             headerShown: false,
@@ -111,6 +128,42 @@ export default function RootNavigator() {
                 name="OrderTracking"
                 component={OrderTrackingScreen}
                 options={{ contentStyle: { backgroundColor: '#FFF' } }}
+              />
+              <Stack.Screen
+                name="OrderDetails"
+                component={OrderDetailsScreen}
+                options={{ contentStyle: { backgroundColor: '#F9F8FC' } }}
+              />
+              {/* ── Swiggy Screens ─────────────────────────────────────── */}
+              {/* OAuth deep-link callback */}
+              <Stack.Screen
+                name="SwiggyCallback"
+                component={SwiggyCallbackScreen}
+                options={{ contentStyle: { backgroundColor: '#0D0D0D' }, animation: 'fade' }}
+              />
+              {/* 'Powered by Swiggy' connect gate (mode: food | grocery) */}
+              <Stack.Screen
+                name="SwiggyConnect"
+                component={SwiggyConnectScreen}
+                options={{ contentStyle: { backgroundColor: '#1A0A00' } }}
+              />
+              {/* Live food delivery */}
+              <Stack.Screen
+                name="SwiggyFood"
+                component={SwiggyFoodScreen}
+                options={{ contentStyle: { backgroundColor: '#FAFAFA' } }}
+              />
+              {/* Live grocery / Instamart */}
+              <Stack.Screen
+                name="SwiggyGrocery"
+                component={SwiggyGroceryScreen}
+                options={{ contentStyle: { backgroundColor: '#FAFAFA' } }}
+              />
+              {/* Restaurant menu + ordering */}
+              <Stack.Screen
+                name="SwiggyRestaurant"
+                component={SwiggyRestaurantScreen}
+                options={{ contentStyle: { backgroundColor: '#FAFAFA' } }}
               />
             </>
           ) : (

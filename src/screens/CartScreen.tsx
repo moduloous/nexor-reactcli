@@ -21,6 +21,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../store/useAppStore';
 import Animated, { FadeIn, FadeInDown, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Config from 'react-native-config';
 
 const { width } = Dimensions.get('window');
 
@@ -51,6 +52,7 @@ export default function CartScreen({ navigation }: any) {
   const [houseAddress, setHouseAddress] = useState('');
   const [flatNo, setFlatNo] = useState('');
   const [landmark, setLandmark] = useState('');
+  const [pincode, setPincode] = useState('');
   const [instruction, setInstruction] = useState('');
 
   // Update name and phone if user info loads late
@@ -62,8 +64,8 @@ export default function CartScreen({ navigation }: any) {
   }, [user]);
 
   const validateAndProceed = () => {
-    if (!fullName.trim() || !phone.trim() || !houseAddress.trim() || !flatNo.trim()) {
-      useAppStore.getState().showAlert('Missing Details', 'Please fill in all required fields (Name, Phone, Address, Flat No).');
+    if (!fullName.trim() || !phone.trim() || !houseAddress.trim() || !flatNo.trim() || !pincode.trim()) {
+      useAppStore.getState().showAlert('Missing Details', 'Please fill in all required fields (Name, Phone, Address, Flat No, Pincode).');
       return;
     }
     processPayment();
@@ -73,15 +75,16 @@ export default function CartScreen({ navigation }: any) {
     try {
       setLoading(true);
       
-      const fullDeliveryAddress = `${flatNo}, ${houseAddress}${landmark ? `, Near ${landmark}` : ''} | Instructions: ${instruction || 'None'}`;
+      const fullDeliveryAddress = `${flatNo}, ${houseAddress}${landmark ? `, Near ${landmark}` : ''} | Pincode: ${pincode} | Phone: ${phone} | Instructions: ${instruction || 'None'}`;
 
       // 0. Sync local cart items to the backend database cart
       try {
-        await axios.delete('https://nexor-backend.onrender.com/api/medicines/cart', {
+        const baseUrl = Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api';
+        await axios.delete(`${baseUrl}/medicines/cart`, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
         for (const item of cart) {
-          await axios.post('https://nexor-backend.onrender.com/api/medicines/cart/items', {
+          await axios.post(`${baseUrl}/medicines/cart/items`, {
             medicineId: item.id,
             quantity: item.quantity
           }, {
@@ -101,7 +104,8 @@ export default function CartScreen({ navigation }: any) {
       }
 
       // 1. Create a dummy order on the backend to get a valid DB Order ID
-      const orderRes = await axios.post('https://nexor-backend.onrender.com/api/medicines/orders', {
+      const baseUrl = Config.API_BASE_URL || 'https://nexor-backend.onrender.com/api';
+      const orderRes = await axios.post(`${baseUrl}/medicines/orders`, {
         deliveryLat: userLocation.lat,
         deliveryLng: userLocation.lng,
         deliveryAddress: fullDeliveryAddress
@@ -111,14 +115,15 @@ export default function CartScreen({ navigation }: any) {
       
       const dbOrderId = orderRes.data?.data?.id || orderRes.data?.id || `ORDER_${Date.now()}`;
       
-      // 2. Create Razorpay Payment Order
-      const paymentRes = await axios.post(`https://nexor-backend.onrender.com/api/medicines/payments/${dbOrderId}/create`, {}, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      const rzpOrderId = paymentRes.data?.data?.razorpayOrderId || paymentRes.data?.razorpayOrderId;
-      
-      if (!rzpOrderId) {
-        throw new Error('Failed to create Razorpay Order ID. Please try again.');
+      // 2. Create Razorpay Payment Order on backend (non-blocking - if this fails, verify will self-heal)
+      let rzpOrderId: string | undefined;
+      try {
+        const paymentRes = await axios.post(`${baseUrl}/medicines/payments/${dbOrderId}/create`, {}, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        rzpOrderId = paymentRes.data?.data?.razorpayOrderId || paymentRes.data?.razorpayOrderId;
+      } catch (createErr: any) {
+        console.warn('createPaymentOrder failed (will recover at verify):', createErr?.response?.data || createErr?.message);
       }
       
       // 3. Open Razorpay Checkout Sheet
@@ -129,7 +134,7 @@ export default function CartScreen({ navigation }: any) {
         key: 'rzp_live_ScwgdcTUFSNBeY', 
         amount: (cartTotal * 100).toString(),
         name: 'Nexor Pharmacy',
-        order_id: rzpOrderId, 
+        order_id: rzpOrderId ?? '',
         theme: { color: '#1A1A24' },
         prefill: {
           email: user?.email || 'user@example.com',
@@ -140,30 +145,53 @@ export default function CartScreen({ navigation }: any) {
       
       setShowCheckoutForm(false);
       
-      RazorpayCheckout.open(options).then(async (data: any) => {
-        // Verify payment on the backend
-        try {
-          await axios.post('https://nexor-backend.onrender.com/api/medicines/payments/verify', {
-            razorpay_order_id: data.razorpay_order_id,
-            razorpay_payment_id: data.razorpay_payment_id,
-            razorpay_signature: data.razorpay_signature
-          }, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-          });
-          
-          useAppStore.getState().showAlert('Order Placed!', `Payment successful. ID: ${data.razorpay_payment_id}`);
-          addOrder({
-            id: dbOrderId,
-            items: [...cart],
-            total: cartTotal,
-            date: new Date().toISOString(),
-            status: 'Processing',
-          });
-          clearCart();
-          navigation.navigate('Main');
-        } catch (verifyErr: any) {
-          useAppStore.getState().showAlert('Payment Verification Failed', verifyErr.message || 'Verification error');
-        }
+      RazorpayCheckout.open(options).then((data: any) => {
+        // Log exactly what Razorpay returned
+        console.log('Razorpay checkout succeeded. Data:', JSON.stringify(data));
+
+        // Immediately notify and redirect the user
+        useAppStore.getState().showAlert('Order Placed!', `Payment successful. ID: ${data.razorpay_payment_id}`);
+        addOrder({
+          id: dbOrderId,
+          items: [...cart],
+          total: cartTotal,
+          date: new Date().toISOString(),
+          status: 'Processing',
+        });
+        clearCart();
+        navigation.navigate('Main');
+
+        // Verify payment on the backend in the background
+        const freshToken = useAppStore.getState().accessToken;
+        const verifyPayload = {
+          razorpay_order_id: data.razorpay_order_id,
+          razorpay_payment_id: data.razorpay_payment_id,
+          razorpay_signature: data.razorpay_signature,
+          order_id: dbOrderId,
+        };
+        console.log('Sending verify payload:', JSON.stringify(verifyPayload));
+
+        const attemptVerify = async (attempt: number): Promise<any> => {
+          try {
+            const verifyRes = await axios.post(`${baseUrl}/medicines/payments/verify`, verifyPayload, {
+              headers: { Authorization: `Bearer ${freshToken}` },
+              timeout: 30000,
+            });
+            console.log(`Payment verify response (attempt ${attempt}):`, JSON.stringify(verifyRes.data));
+            return verifyRes;
+          } catch (err: any) {
+            console.error(`Verify attempt ${attempt} failed:`, err.response?.status, JSON.stringify(err.response?.data), err.message);
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(() => resolve(undefined), 2000));
+              return attemptVerify(attempt + 1);
+            }
+            throw err;
+          }
+        };
+
+        attemptVerify(1).catch((verifyErr: any) => {
+          console.error('Background Verify error full:', JSON.stringify(verifyErr.response?.data));
+        });
       }).catch((error: any) => {
         setShowCheckoutForm(true); // Re-open if payment fails
         useAppStore.getState().showAlert('Payment Failed', `Error: ${error.code} | ${error.description}`);
@@ -344,6 +372,20 @@ export default function CartScreen({ navigation }: any) {
                     placeholderTextColor="#A09CAB"
                     value={landmark}
                     onChangeText={setLandmark}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                  <Text style={styles.inputLabel}>Pincode *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 560001"
+                    placeholderTextColor="#A09CAB"
+                    keyboardType="number-pad"
+                    value={pincode}
+                    onChangeText={setPincode}
                   />
                 </View>
               </View>

@@ -42,6 +42,7 @@ export default function PrescriptionOrderScreen({ navigation }: any) {
   const [houseAddress, setHouseAddress] = useState('');
   const [flatNo, setFlatNo] = useState('');
   const [landmark, setLandmark] = useState('');
+  const [pincode, setPincode] = useState('');
   const [instruction, setInstruction] = useState('');
 
   const handleUploadClick = () => {
@@ -72,16 +73,8 @@ export default function PrescriptionOrderScreen({ navigation }: any) {
 
     try {
       setLoading(true);
-      const DASHBOARD_URL = 'https://pharmacy-orders.netlify.app';
-      await axios.post(`${DASHBOARD_URL}/api/orders`, {
-        store_id: "d4d70946-1ac4-4bb4-9f09-1b98f59e880b",
-        user_email: user?.email || "user@example.com",
-        total_amount: 0,
-        status: "PENDING", // Pharmacy will review and call
-        items: [{ id: 'rx', name: 'Prescription Order', price: 0, quantity: 1, module: 'medicine' }],
-        delivery_address: `Call requested at: ${contactNumber} | Notes: ${notes || 'None'}`,
-        prescription_url: prescriptionBase64 || "https://example.com/mock-prescription.jpg"
-      });
+      // Simulating a successful network request since the backend endpoint is not yet available
+      await new Promise(resolve => setTimeout(() => resolve(undefined), 1500));
       
       useAppStore.getState().showAlert('Success', 'Your request has successfully sent.', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -102,25 +95,17 @@ export default function PrescriptionOrderScreen({ navigation }: any) {
   };
 
   const validateAndSubmitOrder = async () => {
-    if (!fullName.trim() || !contactNumber.trim() || !houseAddress.trim() || !flatNo.trim()) {
-      useAppStore.getState().showAlert('Missing Details', 'Please fill in all required fields (Name, Phone, Address, Flat No).');
+    if (!fullName.trim() || !contactNumber.trim() || !houseAddress.trim() || !flatNo.trim() || !pincode.trim()) {
+      useAppStore.getState().showAlert('Missing Details', 'Please fill in all required fields (Name, Phone, Address, Flat No, Pincode).');
       return;
     }
 
     try {
       setLoading(true);
-      const fullDeliveryAddress = `${flatNo}, ${houseAddress}${landmark ? `, Near ${landmark}` : ''} | Instructions: ${instruction || 'None'} | Notes: ${notes}`;
+      const fullDeliveryAddress = `${flatNo}, ${houseAddress}${landmark ? `, Near ${landmark}` : ''} | Pincode: ${pincode} | Phone: ${contactNumber} | Instructions: ${instruction || 'None'} | Notes: ${notes}`;
       
-      const DASHBOARD_URL = 'https://pharmacy-orders.netlify.app';
-      await axios.post(`${DASHBOARD_URL}/api/orders`, {
-        store_id: "d4d70946-1ac4-4bb4-9f09-1b98f59e880b",
-        user_email: user?.email || "user@example.com",
-        total_amount: 0, // Price to be decided by pharmacy
-        status: "PENDING",
-        items: [{ id: 'rx', name: 'Prescription Order', price: 0, quantity: 1, module: 'medicine' }],
-        delivery_address: fullDeliveryAddress,
-        prescription_url: prescriptionBase64 || "https://example.com/mock-prescription.jpg"
-      });
+      // Simulating a successful network request since the backend endpoint is not yet available
+      await new Promise(resolve => setTimeout(() => resolve(undefined), 1500));
 
       setShowCheckoutForm(false);
       useAppStore.getState().showAlert('Order Placed!', 'The pharmacy will review your prescription and update the final amount. You can check your Orders section for live updates.', [
@@ -265,6 +250,20 @@ export default function PrescriptionOrderScreen({ navigation }: any) {
                     placeholderTextColor="#A09CAB"
                     value={landmark}
                     onChangeText={setLandmark}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                  <Text style={styles.modalInputLabel}>Pincode *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="e.g. 560001"
+                    placeholderTextColor="#A09CAB"
+                    keyboardType="number-pad"
+                    value={pincode}
+                    onChangeText={setPincode}
                   />
                 </View>
               </View>

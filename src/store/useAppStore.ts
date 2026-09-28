@@ -45,6 +45,8 @@ export interface AppState {
   isAuthenticated: boolean;
   isLoading: boolean;
   accessToken: string | null;
+  /** Convenience alias for accessToken — used by SwiggyCallbackScreen */
+  token: string | null;
   refreshToken: string | null;
 
   // User
@@ -62,6 +64,9 @@ export interface AppState {
 
   // Custom Alert
   alertData: AlertData;
+
+  // Swiggy OAuth — PKCE code verifier (stored before OAuth redirect, cleared after use)
+  swiggyCodeVerifier: string | null;
 
   // Auth Actions
   setAuth: (accessToken: string, refreshToken: string, user: UserProfile | any) => void;
@@ -82,6 +87,10 @@ export interface AppState {
   // Alert Actions
   showAlert: (title: string, message: string, buttons?: AlertButton[]) => void;
   hideAlert: () => void;
+
+  // Swiggy OAuth Actions
+  setSwiggyCodeVerifier: (verifier: string) => void;
+  clearSwiggyCodeVerifier: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -96,6 +105,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   accessToken: null,
+  token: null,
   refreshToken: null,
   user: null,
   userLocation: null,
@@ -105,20 +115,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   cartTotal: 0,
   orders: [],
   alertData: { visible: false, title: '', message: '' },
+  swiggyCodeVerifier: null,
 
   // Auth Actions
   setAuth: (accessToken, refreshToken, user) =>
-    set({ isAuthenticated: true, accessToken, refreshToken, user }),
+    set({ isAuthenticated: true, accessToken, token: accessToken, refreshToken, user }),
 
   logout: () =>
     set({
       isAuthenticated: false,
       accessToken: null,
+      token: null,
       refreshToken: null,
       user: null,
       cart: [],
       cartTotal: 0,
       orders: [],
+      swiggyCodeVerifier: null,
     }),
 
   setLoading: (loading) =>
@@ -171,4 +184,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Alert Actions
   showAlert: (title, message, buttons) => set({ alertData: { visible: true, title, message, buttons } }),
   hideAlert: () => set((state) => ({ alertData: { ...state.alertData, visible: false } })),
+
+  // Swiggy OAuth Actions
+  setSwiggyCodeVerifier: (verifier) => set({ swiggyCodeVerifier: verifier }),
+  clearSwiggyCodeVerifier: () => set({ swiggyCodeVerifier: null }),
 }));

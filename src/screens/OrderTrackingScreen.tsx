@@ -1,146 +1,38 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Map, Camera, GeoJSONSource, Layer, Marker } from '@maplibre/maplibre-react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import io, { Socket } from 'socket.io-client';
 import Icon from 'react-native-vector-icons/Feather';
+import Video from 'react-native-video';
 import { useAppStore } from '../store/useAppStore';
 import { CustomLoader } from '../components/CustomLoader';
-import { supabase } from '../lib/supabase';
-import { mapService } from '../services/MapService';
-import { routingService, RouteData } from '../services/RoutingService';
-
-// Initialize map service
-mapService.init();
-
-// Use your actual backend URL here. Adjust this to match your environment.
-const SOCKET_URL = 'http://10.0.2.2:3000'; 
-
-interface LocationUpdate {
-  latitude: number;
-  longitude: number;
-  heading?: number;
-  timestamp: string;
-}
 
 export default function OrderTrackingScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { orderId } = route.params || {};
-  const token = useAppStore(state => state.accessToken); // Supabase token
+  const token = useAppStore(state => state.accessToken);
 
   const [order, setOrder] = useState<any>(null);
-  const [riderLocation, setRiderLocation] = useState<LocationUpdate | null>(null);
-  const [status, setStatus] = useState<string>('Connecting...');
-  const [isStale, setIsStale] = useState(false);
-  const [routeData, setRouteData] = useState<RouteData | null>(null);
-  const socketRef = useRef<Socket | null>(null);
-  const cameraRef = useRef<any>(null);
 
   useEffect(() => {
-    // Fetch initial order details from Supabase to get destination coords
     const fetchOrder = async () => {
       try {
-        const { data, error } = await supabase
-          .from('medicine_orders')
-          .select('*')
-          .eq('id', orderId)
-          .single();
-          
-        if (error) throw error;
+        const baseUrl = 'https://nexor-backend.onrender.com/api';
+        const res = await fetch(`${baseUrl}/medicines/orders/${orderId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) throw new Error('Failed to fetch order');
+        const json = await res.json();
+        const data = json.data || json;
+        
         setOrder(data);
       } catch (err) {
         console.error('Failed to fetch order', err);
-        Alert.alert('Error', 'Failed to fetch order details');
       }
     };
-    if (orderId) fetchOrder();
-  }, [orderId]);
-
-  useEffect(() => {
-    if (!orderId || !token || !order) return;
-
-    if (['DELIVERED', 'CANCELLED', 'FAILED'].includes(order.status)) {
-      setStatus(`Order is ${order.status}`);
-      return;
-    }
-
-    const socket = io(`${SOCKET_URL}/medicines/delivery`, {
-      auth: { token },
-      transports: ['websocket'],
-    });
-
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      setStatus('Waiting for rider location...');
-      socket.emit('joinOrderRoom', orderId);
-    });
-
-    socket.on('disconnect', () => {
-      setStatus('Connection lost, reconnecting...');
-    });
-
-    socket.on('rider:location:update', async (payload: any) => {
-      // 1. Instantly update rider marker
-      setRiderLocation({
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        heading: payload.heading,
-        timestamp: payload.timestamp,
-      });
-      setIsStale(false);
-      setStatus('Live tracking active');
-
-      // 2. Decide whether to fetch a new route
-      const destLat = order.delivery_lat || order.deliveryLat || 12.9116;
-      const destLng = order.delivery_lng || order.deliveryLng || 77.6412;
-
-      if (routingService.shouldRecalculate(payload.latitude, payload.longitude)) {
-        const newRoute = await routingService.getRoute(
-          payload.latitude, 
-          payload.longitude,
-          destLat,
-          destLng
-        );
-        if (newRoute) {
-          setRouteData(newRoute);
-        }
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [orderId, token, order]);
-
-  // Check for stale location (No update in 30s)
-  useEffect(() => {
-    if (!riderLocation) return;
-    const interval = setInterval(() => {
-      const diff = Date.now() - new Date(riderLocation.timestamp).getTime();
-      if (diff > 30000) {
-        setIsStale(true);
-        setStatus('Rider location temporarily unavailable');
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [riderLocation]);
-
-  // Handle camera bounds
-  useEffect(() => {
-    if (cameraRef.current && order && riderLocation) {
-      const destLat = order.delivery_lat || order.deliveryLat || 12.9116;
-      const destLng = order.delivery_lng || order.deliveryLng || 77.6412;
-      
-      cameraRef.current.fitBounds(
-        [riderLocation.longitude, riderLocation.latitude],
-        [destLng, destLat],
-        50, // padding
-        500 // animation duration
-      );
-    }
-  }, [riderLocation, order]);
+    if (orderId && token) fetchOrder();
+  }, [orderId, token]);
 
   if (!order) {
     return (
@@ -150,201 +42,122 @@ export default function OrderTrackingScreen() {
     );
   }
 
-  const destLat = order.delivery_lat || order.deliveryLat || 12.9116;
-  const destLng = order.delivery_lng || order.deliveryLng || 77.6412;
-  const mapStyleUrl = mapService.getStyleUrl();
-
-  const formatDistance = (meters: number) => {
-    if (meters < 1000) return `${Math.round(meters)} m`;
-    return `${(meters / 1000).toFixed(1)} km`;
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.round(seconds / 60);
-    if (mins < 1) return 'Less than a minute';
-    return `${mins} min`;
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-left" size={24} color="#1C1C1E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Tracking</Text>
+        <Text style={styles.headerTitle}>Tracking Order</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <View style={[styles.statusBanner, isStale && styles.statusBannerStale]}>
-        <Text style={styles.statusText}>{status}</Text>
-      </View>
+      <View style={styles.content}>
+        <View style={styles.videoContainer}>
+          <Video 
+            source={{ uri: 'https://mtxqrudcbctmjtrotuyk.supabase.co/storage/v1/object/sign/loader/PjvqI4v87p16Hj6133.mp4?token=eyJraWQiOiI3NjNhNzI3NC04MDNmLTQyMDYtYWQwYS0xOTBhYThhOTI1Y2MiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2FkZXIvUGp2cUk0djg3cDE2SGo2MTMzLm1wNCIsInNjb3BlIjoiZG93bmxvYWQiLCJpYXQiOjE3OTAzNDg1NzcsImV4cCI6MTgyMTg4NDU3N30.xtd5fQqLHZCHDZYeE7uhAUBRKzWJc4e53BhO6TNWkq0' }}
+            style={styles.video}
+            resizeMode="cover"
+            repeat={true}
+            muted={true}
+          />
+        </View>
+        <Text style={styles.title}>Your Order is on the Way!</Text>
+        <Text style={styles.subtitle}>
+          Our delivery partner is currently en route with your items. 
+          Please keep your phone handy!
+        </Text>
 
-      <Map style={styles.map} mapStyle={mapStyleUrl}>
-        <Camera
-          ref={cameraRef}
-          initialViewState={{
-            center: [destLng, destLat],
-            zoom: 14,
-          }}
-        />
-
-        {/* Route Line */}
-        {routeData && (
-          <GeoJSONSource id="routeSource" data={routeData.geometry}>
-            <Layer
-              id="routeFill"
-              type="line"
-              style={{
-                lineColor: '#6C63FF',
-                lineWidth: 4,
-                lineCap: 'round',
-                lineJoin: 'round',
-              }}
-            />
-          </GeoJSONSource>
-        )}
-
-        {/* Customer Destination Marker */}
-        <Marker
-          id="destination"
-          lngLat={[destLng, destLat]}
-        >
-          <View style={styles.destMarker}>
-            <Icon name="home" size={16} color="#FFF" />
-          </View>
-        </Marker>
-
-        {/* Live Rider Marker */}
-        {riderLocation && (
-          <Marker
-            id="rider"
-            lngLat={[riderLocation.longitude, riderLocation.latitude]}
-          >
-            <View style={styles.riderMarker}>
-              <Icon 
-                name="navigation" 
-                size={20} 
-                color="#FFF" 
-                style={{ transform: [{ rotate: `${riderLocation.heading || 0}deg` }] }}
-              />
-            </View>
-          </Marker>
-        )}
-      </Map>
-
-      {/* ETA and Distance Overlay */}
-      {routeData && (
-        <View style={styles.routeInfoCard}>
-          <View style={styles.routeInfoRow}>
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>Distance</Text>
-              <Text style={styles.infoValue}>{formatDistance(routeData.distance)}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoCol}>
-              <Text style={styles.infoLabel}>ETA</Text>
-              <Text style={styles.infoValue}>{formatDuration(routeData.duration)}</Text>
-            </View>
+        <View style={styles.statusCard}>
+          <Icon name="package" size={24} color="#6C63FF" />
+          <View style={styles.statusTextContainer}>
+            <Text style={styles.statusTitle}>Order Status</Text>
+            <Text style={styles.statusValue}>{order.status || 'OUT FOR DELIVERY'}</Text>
           </View>
         </View>
-      )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: '#FFF',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F5',
   },
-  backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1C1C1E' },
-  statusBanner: {
-    backgroundColor: '#34C759',
-    padding: 10,
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#1A1A24' },
+  content: {
+    flex: 1,
     alignItems: 'center',
-    zIndex: 5,
+    padding: 24,
+    paddingTop: 40,
   },
-  statusBannerStale: {
-    backgroundColor: '#FF9500',
-  },
-  statusText: {
-    color: '#FFF',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  map: { flex: 1 },
-  destMarker: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-  },
-  riderMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#6C63FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  routeInfoCard: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
+  videoContainer: {
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    overflow: 'hidden',
+    backgroundColor: '#F9F8FC',
+    marginBottom: 40,
+    shadowColor: '#6C63FF',
     shadowOpacity: 0.15,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
   },
-  routeInfoRow: {
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1A1A24',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#706B82',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+  statusCard: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
+    backgroundColor: '#F9F8FC',
+    padding: 20,
+    borderRadius: 16,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#F0F0F5',
   },
-  infoCol: {
-    alignItems: 'center',
+  statusTextContainer: {
+    marginLeft: 16,
   },
-  infoLabel: {
-    fontSize: 12,
-    color: '#8E8B99',
+  statusTitle: {
+    fontSize: 13,
+    color: '#706B82',
     fontWeight: '600',
     marginBottom: 4,
   },
-  infoValue: {
-    fontSize: 18,
-    color: '#1C1C1E',
+  statusValue: {
+    fontSize: 16,
     fontWeight: '800',
-  },
-  infoDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#E0E0E0',
+    color: '#1A1A24',
   }
 });
